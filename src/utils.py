@@ -52,12 +52,11 @@ def parse_UK_Data(fileName):
     
     for index,_ in enumerate(distance_Data):
          distance_Data[index] = distance_Data[index].str.split('\t')
-
     distance_Data = distance_Data.T[0].apply(pd.Series)
     
     #Drop last column since data set has dangling tab
     distance_Data.drop([int(len(data)/2)],axis=1,inplace=True)
-    
+    distance_Data = distance_Data.apply(pd.to_numeric)
 
     #=========PARSE CITY DATA ===================
     station_Data = data[int(len(data)/2):]
