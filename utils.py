@@ -1,7 +1,29 @@
 import pandas as pd
 
 def parse_UK_Data(fileName):
-    
+    """ 
+        Parses a file from the UK Pollution-Routing Problem Instance Library
+        (http://www.apollo.management.soton.ac.uk/prplib.htm)
+
+        --Input: Filename, e.g. "path_to_file/UK10_01.txt"
+
+        --Output: Three separate data frames.
+            Meta Data: Contains the following fields
+                Customer amount
+                Vehicle Curb Weight(kg)
+                Max Load(kg)
+                Minimum Speed(km/h)
+                Maximum Speed(km/h)
+
+            Distance Matrix: Contains the distance matrix between the cities
+
+            City Data: Information about the different cities
+                City Name
+                Demand(kg)
+                Ready Time(sec)
+                Due Time(sec)
+                Service Time(sec)
+    """
     
     data = pd.read_csv(fileName, header = None,sep='\n',engine="python")
     metaData = data[:3]
