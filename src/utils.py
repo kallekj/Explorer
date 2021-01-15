@@ -1,4 +1,34 @@
 import pandas as pd
+from geopy.geocoders import Nominatim
+import time
+from tqdm import tqdm
+
+
+def generate_coordinates(station_data, to_csv=False, filename=""):
+    
+    #==========GENERATE COORDINATES==============
+    station_names = station_data["City Name"].values
+    geolocator = Nominatim(user_agent="Explorer")
+    coordinates = {"City Name": station_names, "lat":[], "long":[]}
+    with tqdm(total=station_names.shape[0]) as pbar:
+        for city in station_names:
+            city = city.replace("_", " ")
+            location = geolocator.geocode("{}, England".format(city))
+            pbar.set_description("[City: %s] [lat: %f] [long: %f]" % (city, location.latitude, location.longitude))
+            coordinates["lat"].append(location.latitude)
+            coordinates["long"].append(location.longitude)
+            time.sleep(1.5) # Maximum of one request per second
+            pbar.update()
+    
+    data = pd.DataFrame(coordinates)
+    
+    if to_csv:
+        filename = filename.split("(\.[0-9a-z]+$)")
+        print(filename)
+        data.to_csv(filename[0] + "_coordinates.csv")
+        return data
+    else:
+        return data
 
 def parse_UK_Data(fileName):
     """ 
@@ -69,6 +99,8 @@ def parse_UK_Data(fileName):
     station_Data = station_Data.T[0].apply(pd.Series)
     station_Data.drop([0,3,5,7],axis=1,inplace=True)
     station_Data.columns = ["City Name", "Demand(kg)","Ready Time(sec)","Due Time(sec)","Service Time(sec)"]
-
+    
+    
     
     return metaData, distance_Data, station_Data
+

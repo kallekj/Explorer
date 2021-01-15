@@ -7,6 +7,8 @@ The algorithm developed in the Master Thesis "Capacitated Multi Depot Green Vehi
 
 `source ./env/bin/activate.fish`
 
+`sudo pacman -S proj gdal`
+
 `pip install -r requirements.txt`
 
 ### Update Requirements
