@@ -23,9 +23,8 @@ def generate_coordinates(station_data, to_csv=False, filename=""):
     data = pd.DataFrame(coordinates)
     
     if to_csv:
-        filename = filename.split("(\.[0-9a-z]+$)")
-        print(filename)
-        data.to_csv(filename[0] + "_coordinates.csv")
+        filename = filename.split(".")
+        data.to_csv(".." + filename[2] + "_coordinates.csv")
         return data
     else:
         return data
