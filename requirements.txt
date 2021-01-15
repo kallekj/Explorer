@@ -11,7 +11,7 @@ bleach==3.2.1
 Cartopy==0.18.0
 certifi==2020.12.5
 cffi==1.14.4
-chardet==4.0.0
+chardet==3.0.4
 click==7.1.2
 click-plugins==1.1.1
 cligj==0.7.1
@@ -27,6 +27,7 @@ geographiclib==1.50
 geopandas==0.8.1
 geoplot==0.4.1
 geopy==2.1.0
+herepy==3.2.0
 idna==2.10
 ipykernel==5.4.3
 ipython==7.19.0
@@ -88,7 +89,7 @@ pyzmq==20.0.0
 qtconsole==5.0.1
 QtPy==1.9.0
 rasterio==1.1.8
-requests==2.25.1
+requests==2.24.0
 scikit-learn==0.24.0
 scikit-opt==0.6.1
 scipy==1.6.0
@@ -106,7 +107,7 @@ toml==0.10.2
 tornado==6.1
 tqdm==4.56.0
 traitlets==5.0.5
-urllib3==1.26.2
+urllib3==1.25.11
 wcwidth==0.2.5
 webencodings==0.5.1
 widgetsnbextension==3.5.1
