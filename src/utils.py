@@ -2,21 +2,91 @@ import pandas as pd
 from geopy.geocoders import Nominatim
 import time
 from tqdm import tqdm
+import flexpolyline as fp
+import requests
+import json
 import numpy as np
 
+def generate_routes(coordinates, api_key=""):
+    """
+        Generates a polyline between coordinates sequentially, e.g. (x1,y1) -> (x2,y2) -> (x3,y3) -> (xn,yn)
+        
+        --Input: coordinates - Numpy array of coordinates, must be at least two positions.
+                 api_key - Api key to Here.com
+        
+        --Output: A numpy array with polylines for each route, encoded.
+    """
+    
+    n_routes = coordinates.shape[0]
+    routes_encoded = []
+    with tqdm(total=n_routes-1) as pbar:
+        for i in range(n_routes-1):
+            response = requests.get("https://router.hereapi.com/v8/routes?transportMode=truck&origin=%f,%f&destination=%f,%f&return=polyline&apiKey=%s"
+                                   % (coordinates[i, 0], coordinates[i, 1],
+                                     coordinates[i+1, 0], coordinates[i+1, 1],
+                                     api_key))
+            response_json = response.json()
+            routes_encoded.append(response_json.get("routes")[0].get("sections")[0].get("polyline"))
+            time.sleep(1.5)
+            pbar.update()
+    
+    return np.array(routes_encoded)
+
+def decode_routes(polyline):
+    """
+        Decodes a polyline from here.com api.
+        
+        --Input: A polyline generated from Here.com of a route or routes.
+        
+        --Output: A numpy array with coordinates for the route
+    """
+    
+    return np.array([np.array([list(position) for position in fp.decode(encoded)]) for encoded in polyline], dtype='object')
+
+def generate_distance_matrix(coordinates, api_key=""):
+    """
+        Generates a distance matrix from locations with Here.com api.
+        
+        --Input: Coordinates for the locations as a numpy array.
+        
+        --Output: Distance matrix and error codes as DataFrame.
+                    Error code: 0 = valid
+                    Error code: 3 = computation error, don't trust the corresponding value.
+    """
+    
+    origins = [{"lat":lat, "lng":lng} for lat, lng in coordinates]
+    matrix_request = {"transportMode": "truck", "origins":origins, "regionDefinition": {"type":"world"}, "matrixAttributes":["distances"]}
+    
+    response = requests.post("https://matrix.router.hereapi.com/v8/matrix?async=false&apiKey=%s" % (api_key), json=matrix_request)
+    
+    matrix_distances = np.array(response.json().get("matrix").get("distances")).reshape([coordinates.shape[0],coordinates.shape[0]])
+    matrix_error_codes = np.array(response.json().get("matrix").get("errorCodes")).reshape([coordinates.shape[0],coordinates.shape[0]])
+    matrix_distances_df = pd.DataFrame(matrix_distances)
+    matrix_error_df = pd.DataFrame(matrix_error_codes)
+    
+    return matrix_distances_df, matrix_error_df
+    
 def generate_coordinates(station_data, to_csv=False, filename=""):
+    """
+        Generates a dataframe with coordinates from locations with Nominatim.
+        
+        --Input: DataFrame with name of locations, e.g. "Stockholm", "Göteborg", "Halmstad".
+                    The column name for locations needs to be "City Name".
+        
+        --Output: DataFrame with the location name, lat, lng.
+    """
     
     #==========GENERATE COORDINATES==============
     station_names = station_data["City Name"].values
     geolocator = Nominatim(user_agent="Explorer")
-    coordinates = {"City Name": station_names, "lat":[], "long":[]}
+    coordinates = {"City Name": station_names, "lat":[], "lng":[]}
     with tqdm(total=station_names.shape[0]) as pbar:
         for city in station_names:
             city = city.replace("_", " ")
             location = geolocator.geocode("{}, England".format(city))
-            pbar.set_description("[City: %s] [lat: %f] [long: %f]" % (city, location.latitude, location.longitude))
+            pbar.set_description("[City: %s] [lat: %f] [lng: %f]" % (city, location.latitude, location.longitude))
             coordinates["lat"].append(location.latitude)
-            coordinates["long"].append(location.longitude)
+            coordinates["lng"].append(location.longitude)
             time.sleep(1.5) # Maximum of one request per second
             pbar.update()
     
