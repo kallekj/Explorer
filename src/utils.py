@@ -298,4 +298,5 @@ class Callback(object):
         self.model = model
         self.costs = []
     def __call__(self):
+
         self.costs.append(self.model.CostVar().Max())
