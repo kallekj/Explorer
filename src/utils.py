@@ -7,7 +7,7 @@ import requests
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-
+from ortools.constraint_solver import pywrapcp
 
 def generate_routes(coordinates, api_key=""):
     """
@@ -282,7 +282,13 @@ def create_data_model_start_endpoints(distance_matrix,vehicle_amount,customer_de
     data['vehicle_capacities'] = vehicle_capacities
     return data
 
-                
+def create_routing_index_manager(data):
+    if "depot" in data:
+        return pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
+                                       data['num_vehicles'], data['depot'])
+    
+    return pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
+                                       data['num_vehicles'],data['starts'],data['ends'])                
                 
                 
                 
