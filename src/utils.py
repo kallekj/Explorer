@@ -50,6 +50,8 @@ def generate_distance_matrix(coordinates, api_key=""):
         Generates a distance matrix from locations with Here.com api.
         
         --Input: Coordinates for the locations as a numpy array.
+                    Max size api: 100x1 or 15x100
+                    Max size this function: 15x15
         
         --Output: Distance matrix and error codes as DataFrame.
                     Error code: 0 = valid
