@@ -7,7 +7,7 @@ import requests
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-
+from ortools.constraint_solver import pywrapcp
 
 def generate_routes(coordinates, api_key=""):
     """
@@ -261,6 +261,39 @@ def plot_routes(vehicle_solutions,points_coordinate,dbf,station_ids = False):
                 ax.text(x, y, str(i), color="red", fontsize=12)
 
 
+def create_data_model_depot(distance_matrix,vehicle_amount,customer_demands,vehicle_capacities,depot=0):
+    if type(distance_matrix) == pd.DataFrame:
+        distance_matrix = distance_matrix.to_numpy()
+    data = {}
+    data['distance_matrix'] = distance_matrix.tolist()
+    data['num_vehicles'] = vehicle_amount
+    data['depot'] = depot
+    data['demands'] = customer_demands
+    data['vehicle_capacities'] = vehicle_capacities
+    return data
+
+def create_data_model_start_endpoints(distance_matrix,vehicle_amount,customer_demands,vehicle_capacities,startpoints,endpoints):
+    if type(distance_matrix) == pd.DataFrame:
+        distance_matrix = distance_matrix.to_numpy()
+    data = {}
+    data['distance_matrix'] = distance_matrix.tolist()
+    data['num_vehicles'] = vehicle_amount
+    data['starts'] = startpoints
+    data['ends'] = endpoints
+    data['demands'] = customer_demands
+    data['vehicle_capacities'] = vehicle_capacities
+    return data
+
+def create_routing_index_manager(data):
+    if "depot" in data:
+        return pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
+                                       data['num_vehicles'], data['depot'])
+    
+    return pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
+                                       data['num_vehicles'],data['starts'],data['ends'])                
+                
+                
+                
 #From https://github.com/google/ortools/blob/b77bd3ac69b7f3bb02f55b7bab6cbb4bab3917f2/examples/tests/pywraprouting_test.py
 class Callback(object):
     def __init__(self, model):
