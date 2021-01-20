@@ -53,7 +53,7 @@ class RouteOptimizer(ABC):
         except: 
             print("ERROR: COULD NOT COMPUTE SOLUTION")
             traceback.print_exc() 
-
+    
     
     #Based on: 
     #https://github.com/google/or-tools/blob/b77bd3ac69b7f3bb02f55b7bab6cbb4bab3917f2/ortools/constraint_solver/samples/vrptw_store_solution_data.py

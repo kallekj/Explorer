@@ -6,6 +6,8 @@ import flexpolyline as fp
 import requests
 import json
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 def generate_routes(coordinates, api_key=""):
     """
@@ -237,6 +239,24 @@ def get_unary_route_costs(data,fields,routes):
             costs[field].append(route_cost)
     return costs
     
+def plot_routes(vehicle_solutions,points_coordinate,dbf,station_ids = False):
+    fig, ax = plt.subplots(figsize=(30,30))# add .shp mapfile to axes
+    dbf.plot(ax=ax, alpha=0.4,color="grey")
+
+    for vehicle_id in range(len(vehicle_solutions)):
+        vehicle_stops_coordinates=points_coordinate[vehicle_solutions[vehicle_id], :]
+        ax.plot(vehicle_stops_coordinates[:, 1], vehicle_stops_coordinates[:, 0])
+        
+        if station_ids:
+            for i, (x, y) in zip(vehicle_solutions[vehicle_id],
+                                 zip(vehicle_stops_coordinates[:, 1],
+                                     vehicle_stops_coordinates[:, 0])):
+
+                ax.text(x, y, str(i), color="red", fontsize=12)
+        else:
+            for i, (x, y) in enumerate(zip(vehicle_stops_coordinates[:, 1],
+                                     vehicle_stops_coordinates[:, 0])):
+                ax.text(x, y, str(i), color="red", fontsize=12)
 
 
 #From https://github.com/google/ortools/blob/b77bd3ac69b7f3bb02f55b7bab6cbb4bab3917f2/examples/tests/pywraprouting_test.py
