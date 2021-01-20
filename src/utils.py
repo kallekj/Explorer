@@ -29,6 +29,7 @@ def generate_routes(coordinates, api_key=""):
                                      api_key))
             response_json = response.json()
             routes_encoded.append(response_json.get("routes")[0].get("sections")[0].get("polyline"))
+            
             time.sleep(1.5)
             pbar.update()
     
@@ -43,7 +44,7 @@ def decode_routes(polyline):
         --Output: A numpy array with coordinates for the route
     """
     
-    return np.array([np.array([list(position) for position in fp.decode(encoded)]) for encoded in polyline], dtype='object')
+    return np.array([[list(position) for position in fp.decode(encoded)] for encoded in polyline], dtype='object')
 
 def generate_distance_matrix(coordinates, api_key=""):
     """
@@ -241,13 +242,24 @@ def get_unary_route_costs(data,fields,routes):
             costs[field].append(route_cost)
     return costs
     
-def plot_routes(vehicle_solutions,points_coordinate,dbf,station_ids = False):
+def plot_routes(vehicle_solutions, points_coordinate, dbf,station_ids = False, here_api = False, api_key=""):
     fig, ax = plt.subplots(figsize=(30,30))# add .shp mapfile to axes
     dbf.plot(ax=ax, alpha=0.4,color="grey")
-
+    
     for vehicle_id in range(len(vehicle_solutions)):
         vehicle_stops_coordinates=points_coordinate[vehicle_solutions[vehicle_id], :]
-        ax.plot(vehicle_stops_coordinates[:, 1], vehicle_stops_coordinates[:, 0])
+        if here_api:
+            vehicle_route_encoded = generate_routes(vehicle_stops_coordinates, api_key=api_key)
+            vehicle_route_decoded = decode_routes(vehicle_route_encoded)
+            total_vehicle_route = []
+            for route in vehicle_route_decoded:
+                for cords in route:
+                    total_vehicle_route.append(cords)
+            total_vehicle_route = np.array(total_vehicle_route)
+            
+            ax.plot(total_vehicle_route[:, 1], total_vehicle_route[:, 0])
+        else:
+            ax.plot(vehicle_stops_coordinates[:, 1], vehicle_stops_coordinates[:, 0])
         
         if station_ids:
             for i, (x, y) in zip(vehicle_solutions[vehicle_id],
