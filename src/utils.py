@@ -140,7 +140,7 @@ def generate_distance_matrix_test(coordinates, api_key=""):
     return distance_matrix_df, error_matrix_df
     
     
-def generate_coordinates(station_data, to_csv=False, filename=""):
+def generate_coordinates(station_data,location_context="", to_csv=False, filename=""):
     """
         Generates a dataframe with coordinates from locations with Nominatim.
         
@@ -157,7 +157,9 @@ def generate_coordinates(station_data, to_csv=False, filename=""):
     with tqdm(total=station_names.shape[0]) as pbar:
         for city in station_names:
             city = city.replace("_", " ")
-            location = geolocator.geocode("{}, England".format(city))
+            location = geolocator.geocode("{}, {}".format(city,location_context))
+        
+            
             pbar.set_description("[City: %s] [lat: %f] [lng: %f]" % (city, location.latitude, location.longitude))
             coordinates["lat"].append(location.latitude)
             coordinates["lng"].append(location.longitude)
@@ -336,6 +338,7 @@ def plot_routes(vehicle_solutions, points_coordinate, dbf,station_ids = False, h
                                      vehicle_stops_coordinates[:, 0])):
 
                 ax.text(x, y, str(i), color="red", fontsize=12)
+                ax.plot()
         else:
             for i, (x, y) in enumerate(zip(vehicle_stops_coordinates[:, 1],
                                      vehicle_stops_coordinates[:, 0])):
@@ -373,13 +376,21 @@ def create_routing_index_manager(data):
     return pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
                                        data['num_vehicles'],data['starts'],data['ends'])                
                 
-                
-                
+     
+        
+from ortools.sat.python import cp_model        
+        
 #From https://github.com/google/ortools/blob/b77bd3ac69b7f3bb02f55b7bab6cbb4bab3917f2/examples/tests/pywraprouting_test.py
-class Callback(object):
-    def __init__(self, model):
+class Callback(cp_model.CpSolverSolutionCallback):
+    def __init__(self, model,variables):
+        cp_model.CpSolverSolutionCallback.__init__(self)
         self.model = model
         self.costs = []
+        self.__variables = variables
+        self.solution_count = 0
     def __call__(self):
-
+        self.solution_count += 1
+       
         self.costs.append(self.model.CostVar().Max())
+        
+        
