@@ -72,22 +72,23 @@ def generate_distance_matrix(coordinates, api_key=""):
     return matrix_distances_df, matrix_error_df
     
     
-def generate_distance_matrix_test(coordinates, api_key=""):
+def generate_large_distance_matrix(coordinates, api_key=""):
     """
-        Generates a distance matrix from locations with Here.com api.
+        Generates a distance matrix from locations with Here.com api, calculates the matrix as Nx15x100 where N is batches.
         
         --Input: Coordinates for the locations as a numpy array.
                     Max size api: 100x1 or 15x100
-                    Max size this function: 15x15
+                    Max size this function: 100x100
         
         --Output: Distance matrix and error codes as DataFrame.
                     Error code: 0 = valid
                     Error code: 3 = computation error, don't trust the corresponding value.
     """
     
-    def _send_matrix_request(coordinates, api_key):
-        origins = [{"lat":lat, "lng":lng} for lat, lng in coordinates]
-        matrix_request = {"transportMode": "truck", "origins":origins, "regionDefinition": {"type":"world"}, "matrixAttributes":["distances"]}
+    def _send_matrix_request(origin_coordinates, dest_coordinates, api_key):
+        origins = [{"lat":lat, "lng":lng} for lat, lng in origin_coordinates]
+        dests = [{"lat":lat, "lng":lng} for lat, lng in dest_coordinates]
+        matrix_request = {"transportMode": "truck", "origins":origins, "destinations":dests, "regionDefinition": {"type":"world"}, "matrixAttributes":["distances"]}
 
         response = requests.post("https://matrix.router.hereapi.com/v8/matrix?async=false&apiKey=%s" % (api_key), json=matrix_request)
         
@@ -105,35 +106,44 @@ def generate_distance_matrix_test(coordinates, api_key=""):
 
         return distance_matrix, error_matrix
     
-    ## https://developers.google.com/optimization/routing/vrp#distance_matrix_api
-    max_elem = 15*15
-    
-    num_locations = coordinates.shape[0]
-    
-    max_rows = max_elem // num_locations
+    # This is used for testing, the input data is a list of the alphabet
+    def _build_distance_matrix_2(origin_coordinates, dest_coordinates):
+        distance_matrix = []
+        for o in origin_coordinates:
+            for d in dest_coordinates:
+                distance_matrix.append("%s,%s" % (o, d))
 
-    quotient, rest = divmod(num_locations, max_rows)
+        return distance_matrix
     
+    ## https://developers.google.com/optimization/routing/vrp#distance_matrix_api
+    max_size = 15*15
+    num_locations = len(coordinates)
+    max_rows = max_size // num_locations
+    quotient, rest = divmod(num_locations, max_rows)
+    print("q: %s r: %s" % (quotient, rest))
     distance_matrix = []
     error_matrix = []
     # Send q requests, returning max_rows rows per request.
+    
+    destinations = coordinates
+
     for i in range(quotient):
         origin_coordinates = coordinates[i * max_rows: (i + 1) * max_rows]
-        print(origin_coordinates)
-        response = _send_matrix_request(origin_coordinates, api_key)
+        response = _send_matrix_request(origin_coordinates, destinations, api_key)
         resp_distance_matrix, resp_error_matrix = _build_distance_matrix(response)
         distance_matrix += resp_distance_matrix
         error_matrix += resp_error_matrix
-        #distance_matrix += build_distance_matrix(response)
+        #distance_matrix += _build_distance_matrix_2(origin_coordinates, destinations)
     
     if rest > 0:
         origin_coordinates = coordinates[quotient * max_rows: quotient * max_rows + rest]
-        response = _send_matrix_request(origin_coordinates, api_key)
+        response = _send_matrix_request(origin_coordinates, destinations, api_key)
         resp_distance_matrix, resp_error_matrix = _build_distance_matrix(response)
         distance_matrix += resp_distance_matrix
         error_matrix += resp_error_matrix
+        #distance_matrix += _build_distance_matrix_2(origin_coordinates, destinations)
     
-    print(distance_matrix)
+    
     distance_matrix_df = pd.DataFrame(np.array(distance_matrix).reshape([num_locations, num_locations]))
     error_matrix_df = pd.DataFrame(np.array(error_matrix).reshape([num_locations, num_locations]))
     
