@@ -8,6 +8,8 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from ortools.constraint_solver import pywrapcp
+from ortools.constraint_solver.pywrapcp import SolutionCollector
+import re
 
 def generate_routes(coordinates, api_key=""):
     """
@@ -386,21 +388,73 @@ def create_routing_index_manager(data):
     return pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
                                        data['num_vehicles'],data['starts'],data['ends'])                
                 
-     
+def extract_all_solutions(collector:SolutionCollector):
+    solutions = []
+    for solution_number in range(collector.SolutionCount()):
+        sol_dict = {}
+        sol =  collector.Solution(solution_number).IntVarContainer()
+        for x in range(sol.Size()):
+            from_var_str = str(sol.Element(x).Var())
+            from_node_search = re.search('Nexts(\d+)',from_var_str)
+            if from_node_search:
+                from_node = int(from_node_search.group(1))
+                sol_dict[from_node] = sol.Element(x).Value() 
+        solutions.append(sol_dict)
+    return solutions   
+
+def calulate_search_costs(solutions,f,start_nodes,end_nodes=None):
+    check_type(solutions,list)
+    costs = []
+    for solution in solutions:
+        costs.append(calculate__search__cost_val(solution,f,start_nodes,end_nodes))
+    costs = np.array(costs)
+    return costs
+ 
+def check_type(obj,obj_type):
+    if not isinstance(obj, obj_type):
+        raise TypeError
+        
+def is_final_node(current, solution,end_nodes=None):
+    if end_nodes == None:
+        return not current in solution.keys()
+    else:
+        return current in end_nodes
+    
+def calculate__search__cost_val(solution,f,start_nodes,end_nodes=None):
+    # Transit cost funciton
+    unary = True
+    if 'from_index' and 'to_index' in f.__code__.co_varnames:
+        unary = False
+           
+    summations = []
+    for start_node in start_nodes:
+        route_sum = 0
+        current_node = start_node
+        while not is_final_node(current_node,solution,end_nodes):
+            next_node = solution[current_node]
+            if unary:
+                route_sum += f(current_node)
+            else:
+                route_sum += f(current_node,next_node)
+            current_node=next_node
+        summations.append(route_sum)
+        
+    return summations
+        
+
         
 from ortools.sat.python import cp_model        
-        
+from datetime import datetime
 #From https://github.com/google/ortools/blob/b77bd3ac69b7f3bb02f55b7bab6cbb4bab3917f2/examples/tests/pywraprouting_test.py
-class Callback(cp_model.CpSolverSolutionCallback):
-    def __init__(self, model,variables):
-        cp_model.CpSolverSolutionCallback.__init__(self)
+class Callback(object):
+    def __init__(self, model):
         self.model = model
         self.costs = []
-        self.__variables = variables
-        self.solution_count = 0
+        self.solutionTimes = []
+        
     def __call__(self):
-        self.solution_count += 1
-       
+        # Add time between solutions
+        self.solutionTimes.append(datetime.now())
         self.costs.append(self.model.CostVar().Max())
         
         
