@@ -255,13 +255,108 @@ def parse_UK_Data(fileName):
         
     station_Data = station_Data.T[0].apply(pd.Series)
     station_Data.drop([0,3,5,7],axis=1,inplace=True)
-    station_Data.columns = ["City Name", "Demand(kg)","Ready Time(sec)","Due Time(sec)","Service Time(sec)"]
-    
-    
+    station_Data.columns = ["City Name", "Demand(kg)","Ready Time(sec)","Due Time(sec)","Service Time(sec)"]   
     
     return metaData, distance_Data, station_Data
 
-def make_open_problem(data,depot_indices=[0]):
+
+def parse_belgium_data(path, name):
+    
+    """
+        Parse the Belgium dataset from http://vrp-rep.org/datasets/item/2017-0001.html
+        
+        --Input: Path, the path to the dataset folder
+                 Name, the dataset name. E.g. "d2-n50-k10"
+                 
+        --Output: Pandas DataFrames of the content.
+                  meta_data_df, meta data
+                  cord_data_df, coordinates
+                  distance_data_df, distance matrix
+                  demand_data_df, node demands
+                  depot_data_df, depot node ids
+                  time_data_df, time matrix
+    """
+    
+    distance_set_file_path = path+"belgium-road-km-"+name+".vrp"
+    time_set_file_path = path+"belgium-road-time-"+name+".vrp"
+
+    in_meta_section = False
+    in_cord_section = False
+    in_distance_section = False
+    in_demand_section = False
+    in_depot_section = False
+    in_time_section = False
+
+    meta_data = []
+    cord_data = []
+    distance_data = []
+    demand_data = []
+    depot_data = []
+    time_data = []
+    
+    with open(distance_set_file_path, 'r') as f: #open the file
+        distance_set = f.readlines() #put the lines to a variable (list).
+
+    with open(time_set_file_path, 'r') as f: #open the file
+        time_set = f.readlines() #put the lines to a variable (list).
+    
+    for line in distance_set:
+        if "NAME" in line:
+            in_meta_section = True
+        elif "NODE_COORD_SECTION" in line:
+            in_meta_section = False
+            in_cord_section = True
+            continue
+        elif "EDGE_WEIGHT_SECTION" in line:
+            in_cord_section = False
+            in_distance_section = True
+            continue
+        elif "DEMAND_SECTION" in line:
+            in_distance_section = False
+            in_demand_section = True
+            continue
+        elif "DEPOT_SECTION" in line:
+            in_demand_section = False
+            in_depot_section = True
+            continue
+
+        if in_meta_section:
+            meta_data.append(line.replace("\n", "").split(": "))
+        elif in_cord_section:
+            cord_data.append(line.replace("\n", "").split(" "))
+        elif in_distance_section:
+            distance_data.append(line.replace("\n", "").split(" "))
+        elif in_demand_section:
+            demand_data.append(line.replace("\n", "").split(" "))
+        elif in_depot_section:
+            if ("-1" or "EOF") in line:
+                break
+            depot_data.append(line.replace("\n", "").split(" "))
+    
+    for line in time_set:
+        if "EDGE_WEIGHT_SECTION" in line:
+            in_time_section = True
+            continue
+        elif "DEMAND_SECTION" in line:
+            in_time_section = False
+            continue
+
+        if in_time_section:
+            time_data.append(line.replace("\n", "").split(" "))
+
+    meta_data_df = pd.DataFrame(np.array(meta_data)[:,1]).T
+    meta_data_df.columns = np.array(meta_data)[:,0]
+    cord_data_df = pd.DataFrame(cord_data, columns=["node-id", "lat", "lng", "city"])
+    distance_data_df = pd.DataFrame(distance_data)
+    distance_data_df = distance_data_df.drop(distance_data_df.columns[-1], axis=1)
+    demand_data_df = pd.DataFrame(demand_data, columns=["node-id", "demand"])
+    depot_data_df = pd.DataFrame(depot_data, columns=["depot node id"])
+    time_data_df = pd.DataFrame(time_data)
+    time_data_df = time_data_df.drop(time_data_df.columns[-1], axis=1)
+    
+    return meta_data_df, cord_data_df, distance_data_df, demand_data_df, depot_data_df, time_data_df
+
+def make_open_problem(data, depot_indices=[0]):
     """
         Modifies a copy of the parsed data so that the cost of travelling from a pick-up point 
         to the depot is always zero. Using this modified data then changes the problem into an open problem.
