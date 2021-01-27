@@ -122,7 +122,7 @@ def generate_large_distance_matrix(coordinates, api_key=""):
     num_locations = len(coordinates)
     max_rows = max_size // num_locations
     quotient, rest = divmod(num_locations, max_rows)
-    print("q: %s r: %s" % (quotient, rest))
+    #print("q: %s r: %s" % (quotient, rest))
     distance_matrix = []
     error_matrix = []
     # Send q requests, returning max_rows rows per request.
