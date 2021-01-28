@@ -56,22 +56,24 @@ def generate_distance_matrix(coordinates, api_key=""):
                     Max size api: 100x1 or 15x100
                     Max size this function: 15x15
         
-        --Output: Distance matrix and error codes as DataFrame.
+        --Output: Distance matrix, Travel time matrix and error codes as DataFrame.
                     Error code: 0 = valid
                     Error code: 3 = computation error, don't trust the corresponding value.
     """
     
     origins = [{"lat":lat, "lng":lng} for lat, lng in coordinates]
-    matrix_request = {"transportMode": "truck", "origins":origins, "regionDefinition": {"type":"world"}, "matrixAttributes":["distances"]}
+    matrix_request = {"transportMode": "truck", "origins":origins, "regionDefinition": {"type":"world"}, "matrixAttributes":["distances", "travelTimes"]}
     
     response = requests.post("https://matrix.router.hereapi.com/v8/matrix?async=false&apiKey=%s" % (api_key), json=matrix_request)
     
     matrix_distances = np.array(response.json().get("matrix").get("distances")).reshape([coordinates.shape[0],coordinates.shape[0]])
+    travel_time_matrix = np.array(response.json().get("matrix").get("travelTimes")).reshape([coordinates.shape[0],coordinates.shape[0]])
     matrix_error_codes = np.array(response.json().get("matrix").get("errorCodes")).reshape([coordinates.shape[0],coordinates.shape[0]])
     matrix_distances_df = pd.DataFrame(matrix_distances)
+    travel_time_matrix_df = pd.DataFrame(travel_time_matrix)
     matrix_error_df = pd.DataFrame(matrix_error_codes)
     
-    return matrix_distances_df, matrix_error_df
+    return matrix_distances_df, travel_time_matrix_df, matrix_error_df
     
     
 def generate_large_distance_matrix(coordinates, api_key=""):
@@ -82,7 +84,7 @@ def generate_large_distance_matrix(coordinates, api_key=""):
                     Max size api: 100x1 or 15x100
                     Max size this function: 100x100
         
-        --Output: Distance matrix and error codes as DataFrame.
+        --Output: Distance matrix, Travel time matrix and error codes as DataFrame.
                     Error code: 0 = valid
                     Error code: 3 = computation error, don't trust the corresponding value.
     """
@@ -90,15 +92,14 @@ def generate_large_distance_matrix(coordinates, api_key=""):
     def _send_matrix_request(origin_coordinates, dest_coordinates, api_key):
         origins = [{"lat":lat, "lng":lng} for lat, lng in origin_coordinates]
         dests = [{"lat":lat, "lng":lng} for lat, lng in dest_coordinates]
-        matrix_request = {"transportMode": "truck", "origins":origins, "destinations":dests, "regionDefinition": {"type":"world"}, "matrixAttributes":["distances"]}
-
+        matrix_request = {"transportMode": "truck", "origins":origins, "destinations":dests, "regionDefinition": {"type":"world"}, "matrixAttributes":["distances", "travelTimes"]}
         response = requests.post("https://matrix.router.hereapi.com/v8/matrix?async=false&apiKey=%s" % (api_key), json=matrix_request)
-        
         return response
     
     def _build_distance_matrix(response):
         
         distance_matrix = list(response.json().get("matrix").get("distances"))
+        travel_time_matrix = list(response.json().get("matrix").get("travelTimes"))
         if "errorCodes" in response:
             error_matrix = list(response.json().get("matrix").get("errorCodes"))
         else:
@@ -106,7 +107,7 @@ def generate_large_distance_matrix(coordinates, api_key=""):
         #matrix_distances_df = pd.DataFrame(matrix_distances)
         #matrix_error_df = pd.DataFrame(matrix_error_codes)
 
-        return distance_matrix, error_matrix
+        return distance_matrix, travel_time_matrix, error_matrix
     
     # This is used for testing, the input data is a list of the alphabet
     def _build_distance_matrix_2(origin_coordinates, dest_coordinates):
@@ -124,6 +125,7 @@ def generate_large_distance_matrix(coordinates, api_key=""):
     quotient, rest = divmod(num_locations, max_rows)
     #print("q: %s r: %s" % (quotient, rest))
     distance_matrix = []
+    travel_time_matrix = []
     error_matrix = []
     # Send q requests, returning max_rows rows per request.
     
@@ -132,24 +134,27 @@ def generate_large_distance_matrix(coordinates, api_key=""):
     for i in range(quotient):
         origin_coordinates = coordinates[i * max_rows: (i + 1) * max_rows]
         response = _send_matrix_request(origin_coordinates, destinations, api_key)
-        resp_distance_matrix, resp_error_matrix = _build_distance_matrix(response)
+        resp_distance_matrix, resp_travel_time_matrix, resp_error_matrix = _build_distance_matrix(response)
         distance_matrix += resp_distance_matrix
+        travel_time_matrix += resp_travel_time_matrix
         error_matrix += resp_error_matrix
         #distance_matrix += _build_distance_matrix_2(origin_coordinates, destinations)
     
     if rest > 0:
         origin_coordinates = coordinates[quotient * max_rows: quotient * max_rows + rest]
         response = _send_matrix_request(origin_coordinates, destinations, api_key)
-        resp_distance_matrix, resp_error_matrix = _build_distance_matrix(response)
+        resp_distance_matrix, resp_travel_time_matrix, resp_error_matrix = _build_distance_matrix(response)
         distance_matrix += resp_distance_matrix
+        travel_time_matrix += resp_travel_time_matrix
         error_matrix += resp_error_matrix
         #distance_matrix += _build_distance_matrix_2(origin_coordinates, destinations)
     
     
     distance_matrix_df = pd.DataFrame(np.array(distance_matrix).reshape([num_locations, num_locations]))
+    travel_time_matrix_df = pd.DataFrame(np.array(travel_time_matrix).reshape([num_locations, num_locations]))
     error_matrix_df = pd.DataFrame(np.array(error_matrix).reshape([num_locations, num_locations]))
     
-    return distance_matrix_df, error_matrix_df
+    return distance_matrix_df, travel_time_matrix_df, error_matrix_df
     
     
 def generate_coordinates(station_data,location_context="", to_csv=False, filename=""):
@@ -255,13 +260,108 @@ def parse_UK_Data(fileName):
         
     station_Data = station_Data.T[0].apply(pd.Series)
     station_Data.drop([0,3,5,7],axis=1,inplace=True)
-    station_Data.columns = ["City Name", "Demand(kg)","Ready Time(sec)","Due Time(sec)","Service Time(sec)"]
-    
-    
+    station_Data.columns = ["City Name", "Demand(kg)","Ready Time(sec)","Due Time(sec)","Service Time(sec)"]   
     
     return metaData, distance_Data, station_Data
 
-def make_open_problem(data,depot_indices=[0]):
+
+def parse_belgium_data(path, name):
+    
+    """
+        Parse the Belgium dataset from http://vrp-rep.org/datasets/item/2017-0001.html
+        
+        --Input: Path, the path to the dataset folder
+                 Name, the dataset name. E.g. "d2-n50-k10"
+                 
+        --Output: Pandas DataFrames of the content.
+                  meta_data_df, meta data
+                  cord_data_df, coordinates
+                  distance_data_df, distance matrix
+                  demand_data_df, node demands
+                  depot_data_df, depot node ids
+                  time_data_df, time matrix
+    """
+    
+    distance_set_file_path = path+"belgium-road-km-"+name+".vrp"
+    time_set_file_path = path+"belgium-road-time-"+name+".vrp"
+
+    in_meta_section = False
+    in_cord_section = False
+    in_distance_section = False
+    in_demand_section = False
+    in_depot_section = False
+    in_time_section = False
+
+    meta_data = []
+    cord_data = []
+    distance_data = []
+    demand_data = []
+    depot_data = []
+    time_data = []
+    
+    with open(distance_set_file_path, 'r') as f: #open the file
+        distance_set = f.readlines() #put the lines to a variable (list).
+
+    with open(time_set_file_path, 'r') as f: #open the file
+        time_set = f.readlines() #put the lines to a variable (list).
+    
+    for line in distance_set:
+        if "NAME" in line:
+            in_meta_section = True
+        elif "NODE_COORD_SECTION" in line:
+            in_meta_section = False
+            in_cord_section = True
+            continue
+        elif "EDGE_WEIGHT_SECTION" in line:
+            in_cord_section = False
+            in_distance_section = True
+            continue
+        elif "DEMAND_SECTION" in line:
+            in_distance_section = False
+            in_demand_section = True
+            continue
+        elif "DEPOT_SECTION" in line:
+            in_demand_section = False
+            in_depot_section = True
+            continue
+
+        if in_meta_section:
+            meta_data.append(line.replace("\n", "").split(": "))
+        elif in_cord_section:
+            cord_data.append(line.replace("\n", "").split(" "))
+        elif in_distance_section:
+            distance_data.append(line.replace("\n", "").split(" "))
+        elif in_demand_section:
+            demand_data.append(line.replace("\n", "").split(" "))
+        elif in_depot_section:
+            if ("-1" or "EOF") in line:
+                break
+            depot_data.append(line.replace("\n", "").split(" "))
+    
+    for line in time_set:
+        if "EDGE_WEIGHT_SECTION" in line:
+            in_time_section = True
+            continue
+        elif "DEMAND_SECTION" in line:
+            in_time_section = False
+            continue
+
+        if in_time_section:
+            time_data.append(line.replace("\n", "").split(" "))
+
+    meta_data_df = pd.DataFrame(np.array(meta_data)[:,1]).T
+    meta_data_df.columns = np.array(meta_data)[:,0]
+    cord_data_df = pd.DataFrame(cord_data, columns=["node-id", "lat", "lng", "city"])
+    distance_data_df = pd.DataFrame(distance_data)
+    distance_data_df = distance_data_df.drop(distance_data_df.columns[-1], axis=1)
+    demand_data_df = pd.DataFrame(demand_data, columns=["node-id", "Demand(kg)"])
+    depot_data_df = pd.DataFrame(depot_data, columns=["depot node id"])
+    time_data_df = pd.DataFrame(time_data)
+    time_data_df = time_data_df.drop(time_data_df.columns[-1], axis=1)
+    
+    return meta_data_df, cord_data_df, distance_data_df, demand_data_df, depot_data_df, time_data_df
+
+def make_open_problem(data, depot_indices=[0]):
     """
         Modifies a copy of the parsed data so that the cost of travelling from a pick-up point 
         to the depot is always zero. Using this modified data then changes the problem into an open problem.
