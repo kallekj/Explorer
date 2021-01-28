@@ -557,4 +557,109 @@ class Callback(object):
         self.solutionTimes.append(datetime.now())
         self.costs.append(self.model.CostVar().Max())
         
+
+def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.DataFrame, meta_data:pd.DataFrame, travel_time_matrix:pd.DataFrame) -> pd.DataFrame:
+    
+    """
+        Calculate performance metrics for evaluation.
+        --Input: Distance_matrix:Pandas.DataFrame
+                 Demand_data:Pandas.DataFrame (Column with name Deamnd(kg) for demand per location)
+                 Meta_data:Pandas.DataFrame (Following columns are needed ['F-C Empty (l/100km)', 'F-C Full (l/100km)', 'Max Load(kg)'])
+                 Travel_time_matrix:Pandas.DataFrame
         
+        --Output: Pandas:DataFrame()
+                  Total distance (km)
+                  Total load (kg)
+                  Total Estimated Fuel Consumption (L)
+                  Estimated Fuel Conspumtion (L/100km)
+                  Avg Speed (km/h)  
+                  Total Travel Time (s)
+                  Travel Time hh:mm:ss
+                
+    """
+    
+    
+    def _get_total_distance(vehicles:list, distance_matrix:pd.DataFrame) -> list:
+        total_vehicle_distance = []
+        for vehicle, vehicle_route in enumerate(vehicles):
+            distance = 0
+            for i in range(len(vehicle_route) - 1):
+                distance += distance_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]
+            total_vehicle_distance.append(distance/1e3)
+        return total_vehicle_distance
+    
+    def _get_total_load(vehicles:list, demand_data:pd.DataFrame) -> list:
+        total_vehicle_load = []
+        for vehicle, vehicle_route in enumerate(vehicles):
+            load = 0
+            for i in range(len(vehicle_route) - 1):
+                load += int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
+            total_vehicle_load.append(load)
+        return total_vehicle_load
+    
+    def _get_estimated_fuel_consumption(vehicles:list, meta_data:pd.DataFrame, distance_matrix:pd.DataFrame) -> list:
+        total_vehicle_fuel_consumption = []
+        for vehicle, vehicle_route in enumerate(vehicles):
+            fc = 0
+            for i in range(len(vehicle_route) - 1):
+                #Distance in 100km
+                distance = distance_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]/1e5
+                #Demand in kg
+                load = int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
+                #Fuel consumption between nodes driving empty vehicle
+                fuel_consumption_empty = distance * meta_data['F-C Empty (l/100km)']
+                load_rate = load / float(meta_data['Max Load(kg)'])
+                #Additional fuel consumption when adding load at from_index
+                fuel_consumption_load = distance * load_rate * (meta_data['F-C Full (l/100km)'] - meta_data['F-C Empty (l/100km)'])
+                fc += np.float(fuel_consumption_empty + fuel_consumption_load)
+                
+            total_vehicle_fuel_consumption.append(fc)
+    
+        return total_vehicle_fuel_consumption
+        
+    def _get_avg_estimated_fuel_conspumtion(vehicle_distances:list, vehicle_fc:list) -> list:
+        return  [fc/(dist/10) for dist,fc in zip(vehicle_distances, vehicle_fc)]
+    
+    def _format_time(vehicle_times:list) -> str:
+        times = []
+        for vehicle in vehicle_times:
+            hours, rem = divmod(vehicle, 3600)
+            minutes, seconds = divmod(rem, 60)
+            if(minutes + hours == 0):
+                times.append("{:05.2f}s".format(seconds))
+            elif(minutes > 0 and hours == 0):
+                times.append("{:0>2}:{:05.2f}".format(int(minutes),seconds))
+            else:
+                times.append("{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
+        return times
+    
+    def _get_total_travel_time(vehicles:list, travel_time_matrix:pd.DataFrame) -> list:
+        total_vehicle_travel_time = []
+        for vehicle, vehicle_route in enumerate(vehicles):
+            travel_time = 0
+            for i in range(len(vehicle_route) - 1):
+                travel_time += travel_time_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]
+            total_vehicle_travel_time.append(travel_time)
+        return total_vehicle_travel_time
+    
+    def _get_avg_speed(distances:list, travel_times:list) -> list:
+        return [dist/(seconds/60/60) for dist, seconds in zip(distances, travel_times)]
+    
+    vehicle_distances = _get_total_distance(vehicles, distance_matrix)
+    vehicle_loads = _get_total_load(vehicles, demand_data)
+    vehicle_fc = _get_estimated_fuel_consumption(vehicles, meta_data, distance_matrix)
+    vehicle_avg_fc = _get_avg_estimated_fuel_conspumtion(vehicle_distances, vehicle_fc)
+    vehicle_total_travel_time = _get_total_travel_time(vehicles, travel_time_matrix)
+    vehicle_avg_speed = _get_avg_speed(vehicle_distances, vehicle_total_travel_time)
+    
+    results = pd.DataFrame()
+    results["Total distance (km)"] = np.array(vehicle_distances)
+    results["Total load (kg)"] = np.array(vehicle_loads)
+    results["Total Estimated Fuel Consumption (L)"] = vehicle_fc
+    results["Avg Estimated Fuel Conspumtion (L/100km)"] = vehicle_avg_fc
+    results["Avg Speed (km/h)"] = vehicle_avg_speed  
+    results["Total Travel Time (s)"] = vehicle_total_travel_time
+    results["Travel Time hh:mm:ss"] = _format_time(vehicle_total_travel_time)
+    
+    
+    return results
