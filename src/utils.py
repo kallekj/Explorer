@@ -597,15 +597,15 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
             total_vehicle_load.append(load)
         return total_vehicle_load
     
-    def _get_estimated_fuel_consumption(vehicles:list, meta_data:pd.DataFrame, distance_matrix:pd.DataFrame) -> list:
+    def _get_estimated_fuel_consumption(vehicles:list,start_positions:list,demand_data:pd.DataFrame, meta_data:pd.DataFrame, distance_matrix:pd.DataFrame) -> list:
         total_vehicle_fuel_consumption = []
-        for vehicle, vehicle_route in enumerate(vehicles):
+        for vehicle_route in vehicles:
             fc = 0
             for i in range(len(vehicle_route) - 1):
                 #Distance in 100km
                 distance = distance_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]/1e5
                 #Demand in kg
-                load = int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
+                load = 0 if vehicle_route[i] in start_positions else int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
                 #Fuel consumption between nodes driving empty vehicle
                 fuel_consumption_empty = distance * meta_data['F-C Empty (l/100km)']
                 load_rate = load / float(meta_data['Max Load(kg)'])
@@ -645,9 +645,12 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
     def _get_avg_speed(distances:list, travel_times:list) -> list:
         return [dist/(seconds/60/60) for dist, seconds in zip(distances, travel_times)]
     
+    
+    start_positions = [x[0] for x in vehicles]
+    
     vehicle_distances = _get_total_distance(vehicles, distance_matrix)
     vehicle_loads = _get_total_load(vehicles, demand_data)
-    vehicle_fc = _get_estimated_fuel_consumption(vehicles, meta_data, distance_matrix)
+    vehicle_fc = _get_estimated_fuel_consumption(vehicles,start_positions,demand_data, meta_data, distance_matrix)
     vehicle_avg_fc = _get_avg_estimated_fuel_conspumtion(vehicle_distances, vehicle_fc)
     vehicle_total_travel_time = _get_total_travel_time(vehicles, travel_time_matrix)
     vehicle_avg_speed = _get_avg_speed(vehicle_distances, vehicle_total_travel_time)
