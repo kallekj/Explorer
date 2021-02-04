@@ -597,7 +597,11 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
             total_vehicle_load.append(load)
         return total_vehicle_load
     
-    def _get_estimated_fuel_consumption(vehicles:list,start_positions:list,demand_data:pd.DataFrame, meta_data:pd.DataFrame, distance_matrix:pd.DataFrame) -> list:
+    
+    def _get_estimated_fuel_consumption_rakha():
+        
+    
+    def _get_estimated_fuel_consumption_linear(vehicles:list,start_positions:list,demand_data:pd.DataFrame, meta_data:pd.DataFrame, distance_matrix:pd.DataFrame) -> list:
         total_vehicle_fuel_consumption = []
         for vehicle_route in vehicles:
             fc = 0
