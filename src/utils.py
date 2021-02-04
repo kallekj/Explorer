@@ -541,8 +541,54 @@ def calculate__search__cost_val(solution,f,start_nodes,end_nodes=None):
         
     return summations
         
+def get_fuel_data_rakha():
+        returnDict = {}
+        #https://reader.elsevier.com/reader/sd/pii/S1361920911000782?token=28C5EA5FCAC2E33C438A25D8EC45D5FC04E7D546F5AFFDE134D24EBF66D9C9E3078F79669438F3BDCB2A2A10F67BFD12
+        # Air density at 15C, kg/m³
+        returnDict["air_density"] = 1.2256
+        # Vehicle drag coefficient (unitless)
+        returnDict["drag"] = 0.35
+        # Rolling coefficients (unitless)
+        returnDict["rolling_coeff"] = 1.75
+        # Road condition
+        returnDict["c1"] = 0.0328
+        # Tire type
+        returnDict["c2"] = 4.575
+        # Driveline efficiency
+        returnDict["driveline_eff"] = 0.85
+        # Tire slippage
+        returnDict["slippage"] = 0.03
 
-        
+        #===========================
+
+        # Vehicle frontal area, m²
+        #http://segotn12827.rds.volvo.com/STPIFiles/Volvo/ModelRange/fh42t3a_swe_swe.pdf
+        returnDict["frontal_area"] = 8
+
+        # Number of revolutions (rps)
+        # https://stpi.it.volvo.com/STPIFiles/Volvo/FactSheet/D13%20460T,%20EU6HT_Swe_01_310999629.pdf
+        returnDict["no_revolution"] = 1200/60
+        #https://www.preem.se/contentassets/63186d81c7f742d4860d02da8ebea8fd/preem-evolution-diesel.pdf
+        # kg/l
+        returnDict["diesel_density"] = 0.826
+        #https://www.volvotrucks.us/-/media/vtna/files/shared/powertrain/revised4147_101-volvo_d13_engine-brochure_low-res.pdf
+        # Volume, dm²
+        returnDict["engine_displacement"] = 12.8
+        returnDict["torque"] = 2300
+        # https://stpi.it.volvo.com/STPIFiles/Volvo/FactSheet/D13K460,%20EU6SCR_Swe_08_307895068.pdf
+        returnDict["engine_breaking_effect"] = 375
+        # Calculates the mean effective pressure
+        # https://en.wikipedia.org/wiki/Mean_effective_pressure
+        returnDict["mean_effective_pressure"] = 2*np.pi*2*(returnDict["torque"]/returnDict["engine_displacement"])
+        # Calculates the internal engine friction
+        # https://www.diva-portal.org/smash/get/diva2:669227/FULLTEXT01.pdf
+        returnDict["engine_internal_friction"] = (returnDict["mean_effective_pressure"] * 4 * returnDict["engine_displacement"] * returnDict["no_revolution"])/1000
+        return returnDict
+
+    
+    
+    
+
 from ortools.sat.python import cp_model        
 from datetime import datetime
 #From https://github.com/google/ortools/blob/b77bd3ac69b7f3bb02f55b7bab6cbb4bab3917f2/examples/tests/pywraprouting_test.py
@@ -670,3 +716,5 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
     
     
     return results
+
+    
