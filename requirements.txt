@@ -1,3 +1,4 @@
+numpy==1.19.5
 absl-py==0.11.0
 affine==2.3.0
 anyio==2.0.2
@@ -67,7 +68,6 @@ nest-asyncio==1.4.3
 networkx==2.5
 nominatim==0.1
 notebook==6.1.6
-numpy==1.19.5
 ortools==8.1.8487
 packaging==20.8
 pandas==1.2.0
