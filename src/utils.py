@@ -191,6 +191,26 @@ def generate_coordinates(station_data,location_context="", to_csv=False, filenam
         return data
     else:
         return data
+    
+def save_here_data(path:str,dataset_name:str,distance_matrix:pd.DataFrame,time_matrix:pd.DataFrame):
+    file_name = dataset_name.split('/')[-1].split('.')[0]
+    if path[-1] != '/':
+        path = path +'/'
+        
+    distance_matrix.to_csv(path_or_buf="{}{}_distance_matrix_HERE.csv".format(path,file_name),index=False)
+    time_matrix.to_csv(path_or_buf="{}{}_time_matrix_HERE.csv".format(path,file_name),index=False)
+    
+def load_saved_here_data(path:str,dataset_name:str):
+    file_name = dataset_name.split('/')[-1].split('.')[0]
+    if path[-1] != '/':
+        path = path +'/'
+        
+    distance_file_name = "{}{}_distance_matrix_HERE.csv".format(path,file_name)
+    time_file_name = "{}{}_time_matrix_HERE.csv".format(path,file_name)
+    
+    distance_matrix = pd.read_csv(distance_file_name,dtype=int)
+    time_matrix = pd.read_csv(time_file_name,dtype=int)
+    return distance_matrix, time_matrix
 
 def parse_UK_Data(fileName):
     """ 
@@ -591,6 +611,8 @@ def get_fuel_data_rakha():
 
 from ortools.sat.python import cp_model        
 from datetime import datetime
+from copy import copy
+
 #From https://github.com/google/ortools/blob/b77bd3ac69b7f3bb02f55b7bab6cbb4bab3917f2/examples/tests/pywraprouting_test.py
 class Callback(object):
     def __init__(self, model):
@@ -631,7 +653,10 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
             distance = 0
             for i in range(len(vehicle_route) - 1):
                 distance += distance_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]
-            total_vehicle_distance.append(distance/1e3)
+            if distance == 0:
+                total_vehicle_distance.append(1)
+            else:
+                total_vehicle_distance.append(distance/1e3)
         return total_vehicle_distance
     
     def _get_total_load(vehicles:list, demand_data:pd.DataFrame) -> list:
@@ -645,38 +670,18 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
     
     
     def _get_estimated_fuel_consumption_rakha(vehicles:list,start_positions:list, demand_data:pd.DataFrame, meta_data:pd.DataFrame, distance_matrix:pd.DataFrame, time_matrix:pd.DataFrame) -> list:
-        function_data = get_fuel_data_rakha()
         total_vehicle_fuel_consumption = []
         for vehicle_route in vehicles:
             fc = 0
-            total_weight = meta_data["Vehicle Weight"]
+            total_weight = copy(meta_data["Vehicle Weight"])
             for i in range(len(vehicle_route) - 1):
 
-                distance = distance_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]
+                current_demand = 0 if vehicle_route[i] in start_positions else int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
+                demands =  demand_data.T.loc["Demand(kg)"].astype(int).to_numpy()
 
-                demand = 0 if vehicle_route[i] in start_positions else int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
+                fc += fuel_consumption_rakha(vehicle_route[i],vehicle_route[i+1],distance_matrix,time_matrix,demands,total_weight,start_positions,meta_data)
+                total_weight += current_demand
 
-                current_speed = distance/time_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]
-                
-                specific_fuel_consumption = function_data["diesel_density"] * (meta_data["F-C Empty (l/100km)"]/1e5)*current_speed/function_data["engine_breaking_effect"]
-
-                current_speed_km_h = current_speed * 3.6
-                
-                curb_weight = demand + total_weight
-                total_weight = curb_weight
-
-                g = 9.8066
-
-                R = (function_data["air_density"]/25.92) * function_data["drag"] * function_data["frontal_area"] * current_speed_km_h**2 + \
-                    g * curb_weight * (function_data["rolling_coeff"]/1000) * (function_data["c1"] * current_speed_km_h + function_data["c2"])
-
-                P = R/(3600*0.45) * current_speed_km_h
-
-                F = specific_fuel_consumption * (((function_data["engine_internal_friction"] * function_data["no_revolution"] * function_data["engine_displacement"])/2000) + P)
-
-                fuel_consumption = F*time_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]
-
-                fc += np.float(fuel_consumption)
                 
             total_vehicle_fuel_consumption.append(fc)
         return total_vehicle_fuel_consumption
@@ -688,15 +693,23 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
             total_load = 0
             for i in range(len(vehicle_route) - 1):
                 #Distance in 100km
-                distance = distance_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]/1e5
-                #Demand in kg
-                total_load += 0 if vehicle_route[i] in start_positions else int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
-                #Fuel consumption between nodes driving empty vehicle
-                fuel_consumption_empty = distance * meta_data['F-C Empty (l/100km)']
-                load_rate = total_load / float(meta_data['Max Load(kg)'])
-                #Additional fuel consumption when adding load at from_index
-                fuel_consumption_load = distance * load_rate * (meta_data['F-C Full (l/100km)'] - meta_data['F-C Empty (l/100km)'])
-                fc += np.float(fuel_consumption_empty + fuel_consumption_load)
+                #from_node, to_node,distance_matrix,demands,cumulative_route_load,meta_data):
+                demands =  demand_data.T.loc["Demand(kg)"].astype(int).to_numpy()
+                fc +=fuel_consumption_linear(from_node = vehicle_route[i],to_node =vehicle_route[i+1],
+                                              distance_matrix = distance_matrix,demands=demands,cumulative_route_load = total_load,
+                                              meta_data=meta_data
+                                             )
+                current_demand = 0 if vehicle_route[i] in start_positions else int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
+                total_load += current_demand
+#                 distance = distance_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]/1e5
+#                 #Demand in kg
+#                 total_load += 0 if vehicle_route[i] in start_positions else int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
+#                 #Fuel consumption between nodes driving empty vehicle
+#                 fuel_consumption_empty = distance * meta_data['F-C Empty (l/100km)']
+#                 load_rate = total_load / float(meta_data['Max Load(kg)'])
+#                 #Additional fuel consumption when adding load at from_index
+#                 fuel_consumption_load = distance * load_rate * (meta_data['F-C Full (l/100km)'] - meta_data['F-C Empty (l/100km)'])
+                
                 
             total_vehicle_fuel_consumption.append(fc)
     
@@ -724,7 +737,10 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
             travel_time = 0
             for i in range(len(vehicle_route) - 1):
                 travel_time += travel_time_matrix.iloc[vehicle_route[i]][vehicle_route[i+1]]
-            total_vehicle_travel_time.append(travel_time)
+            if travel_time == 0:
+                total_vehicle_travel_time.append(1)
+            else:
+                total_vehicle_travel_time.append(travel_time)
         return total_vehicle_travel_time
     
     def _get_avg_speed(distances:list, travel_times:list) -> list:
@@ -755,4 +771,69 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
     
     return results
 
+def fuel_consumption_rakha(from_node,to_node,distance_matrix,time_matrix,demands,vehicle_weight,start_positions,meta_data):
+    """
+    Returns the estimated fuel consumption between two nodes.
+    Assumes an acceleration and road gradient of 0
+    Based on 'Virginia Tech Comprehensive Power-Based Fuel Consumption Model:Model development and testing' by Rakha et al. (2011) 
+    Rakha et al. mentiones the follwing source:
+    https://books.google.se/books?hl=sv&lr=&id=Blp2D1DteTYC&oi=fnd&pg=PR11&dq=Theory+of+Ground+Vehicles+J.Y.+Wong&ots=Xump_f09hf&sig=SMj4XXTZlJYlep9qNLTltx4zFHg&redir_esc=y
+    """
+    function_data = get_fuel_data_rakha()
+    
+    distance = distance_matrix.iloc[from_node][to_node]
+    
+    demand = 0 if from_node in start_positions else demands[from_node]
+    
+    current_speed = distance/time_matrix.iloc[from_node][to_node]
+    specific_fuel_consumption = function_data["diesel_density"] * (meta_data["F-C Empty (l/100km)"]/1e5)*current_speed/function_data["engine_breaking_effect"]
+    
+    current_speed_km_h = current_speed * 3.6
+    curb_weight =  demand + vehicle_weight
+    g = 9.8066
+    
+    
+    R = (function_data["air_density"]/25.92) * function_data["drag"] * function_data["frontal_area"] * current_speed_km_h**2 + \
+        g * curb_weight * (function_data["rolling_coeff"]/1000) * (function_data["c1"] * current_speed_km_h + function_data["c2"])
+    
+    P = R/(3600*0.45) * current_speed_km_h
+    
+    F = specific_fuel_consumption * (((function_data["engine_internal_friction"] * function_data["no_revolution"] * function_data["engine_displacement"])/2000) + P)
+    
+    fuel_consumption  = F*time_matrix.iloc[from_node][to_node]
+
+    
+    return np.float(fuel_consumption)
+
+
+def demand_callback(from_node,demands,start_nodes):
+    """Returns the demand of the node."""
+    # Convert from routing variable Index to demands NodeIndex.
+    # from_node = manager.IndexToNode(from_index)
+#     if from_node >= len(demands):
+#         return 0
+    
+    return 0 if from_node in start_nodes else demands[from_node]#demands[int(from_node)]
+
+# Create and register a transit callback.
+def distance_callback(from_index, to_index,distance_matrix):
+    """Returns the distance between the two nodes."""
+    # Convert from routing variable Index to distance matrix NodeIndex.
+    return distance_matrix[from_index][to_index]
+
+# Try this with adding previous load weights, would be done with an additional parameter of previous loads
+def fuel_consumption_linear(from_node, to_node,distance_matrix,demands,cumulative_route_load,meta_data):
+    
+    """Returns the estimated fuel consumption between two nodes.
+    Based on 'A Fuel Consumption Objective of VRP and the Genetic Algorithm' by Hao Xiong"""
+    #Distance in 100km
+    distance = (distance_matrix.iloc[from_node][to_node])/1e5
+    #Demand in kg
+    demand = demands[from_node]
+    #Fuel consumption between nodes driving empty vehicle
+    fuel_consumption_empty = distance * meta_data['F-C Empty (l/100km)']
+    load_rate = (cumulative_route_load + demand) / float(meta_data['Max Load(kg)'])
+    #Additional fuel consumption when adding load at from_index
+    fuel_consumption_load = distance * load_rate * (meta_data['F-C Full (l/100km)'] - meta_data['F-C Empty (l/100km)'])
+    return np.float(fuel_consumption_empty + fuel_consumption_load)
     
