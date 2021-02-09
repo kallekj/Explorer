@@ -771,6 +771,30 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
     
     return results
 
+def generate_final_results(results:list, comp_times:list) -> pd.DataFrame:
+    
+    """
+    Returns a DataFrame with a performance overview of the algorithm.
+    --Input: results, list of DataFrames (Each element is a get_result() DataFrame)
+             comp_times, a list of compution times
+    """
+    
+    results_summed = [pd.DataFrame(df.sum(axis=0)) for df in results]
+    
+    data_df = pd.concat(results_summed, axis=1, ignore_index=True).T
+    data_df.drop(columns=["Travel Time hh:mm:ss", "Total Travel Time (s)"], inplace=True)
+    data_df["Computaion Time"] = comp_times
+    for axs in ["Avg Estimated Fuel Conspumtion (L/100km) (Hao et al.)", "Avg Estimated Fuel Conspumtion (L/100km) (Rakha et al.)", "Avg Speed (km/h)"]:
+        data_df[axs] = data_df[axs]/2
+    
+    result_df = pd.concat({"Max":data_df.max(axis=0),
+                           "Min":data_df.min(axis=0),
+                           "Mean":data_df.mean(axis=0),
+                           "Std":data_df.std(axis=0)}, axis=1)
+    
+    
+    return result_df
+
 def fuel_consumption_rakha(from_node,to_node,distance_matrix,time_matrix,demands,vehicle_weight,start_positions,meta_data):
     """
     Returns the estimated fuel consumption between two nodes.
