@@ -1,0 +1,42 @@
+max_evaluations = 5000
+
+    algorithm_SA = SimulatedAnnealing(problem=problem_SA,
+                                   mutation=PermutationSwapMutation(0.8),
+                                   termination_criterion=StoppingByEvaluations(max_evaluations))
+                                   
+                                   
+                                   
+                                   
+algorithm_LS = LocalSearch(problem=problem_LS,
+                                       mutation=PermutationSwapMutation(0.8),
+                                       termination_criterion=StoppingByEvaluations(max_evaluations),
+                                      comparator=DominanceComparator())
+
+algorithm_NSGAIII = NSGAIII(problem=problem_NSGAIII,
+                            population_size=20,
+                            reference_directions=UniformReferenceDirectionFactory(1, n_points=20),
+                            mutation= PermutationSwapMutation(0.8),
+                            crossover=PMXCrossover(0.8),
+                            termination_criterion=StoppingByEvaluations(max_evaluations),
+                            population_evaluator=MultiprocessEvaluator(),selection=RandomSolutionSelection()
+                               )
+                               
+algorithm_NSGAII = NSGAII(problem=problem_NSGAII,
+                            population_size=20,
+                            offspring_population_size=20,
+                            mutation=PermutationSwapMutation(0.8),
+                            crossover=PMXCrossover(0.8),
+                            termination_criterion=StoppingByEvaluations(max_evaluations),
+                            population_evaluator=MultiprocessEvaluator(),selection=RandomSolutionSelection()
+                               )
+                               
+                               
+algorithm_GA = GeneticAlgorithm(problem=problem_GA,
+                    population_size=20,
+                    offspring_population_size=20,
+                    mutation=PermutationSwapMutation(0.8),
+                    crossover=PMXCrossover(0.8),
+                    selection=RandomSolutionSelection(),
+                    termination_criterion=StoppingByEvaluations(max_evaluations=max_evaluations)
+                    ,population_evaluator=MultiprocessEvaluator()
+                    )
