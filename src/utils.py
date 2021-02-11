@@ -716,7 +716,7 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
         return total_vehicle_fuel_consumption
         
     def _get_avg_estimated_fuel_conspumtion(vehicle_distances:list, vehicle_fc:list) -> list:
-        return  [fc/(dist/10) for dist,fc in zip(vehicle_distances, vehicle_fc)]
+        return  [fc/(dist/100) for dist,fc in zip(vehicle_distances, vehicle_fc)]
     
     def _format_time(vehicle_times:list) -> str:
         times = []
