@@ -561,7 +561,7 @@ def calculate__search__cost_val(solution,f,start_nodes,end_nodes=None):
         
     return summations
         
-def get_fuel_data_rakha():
+def get_fuel_data_wong():
         returnDict = {}
         #https://reader.elsevier.com/reader/sd/pii/S1361920911000782?token=28C5EA5FCAC2E33C438A25D8EC45D5FC04E7D546F5AFFDE134D24EBF66D9C9E3078F79669438F3BDCB2A2A10F67BFD12
         # Air density at 15C, kg/m³
@@ -669,7 +669,7 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
         return total_vehicle_load
     
     
-    def _get_estimated_fuel_consumption_rakha(vehicles:list,start_positions:list, demand_data:pd.DataFrame, meta_data:pd.DataFrame, distance_matrix:pd.DataFrame, time_matrix:pd.DataFrame) -> list:
+    def _get_estimated_fuel_consumption_wong(vehicles:list,start_positions:list, demand_data:pd.DataFrame, meta_data:pd.DataFrame, distance_matrix:pd.DataFrame, time_matrix:pd.DataFrame) -> list:
         total_vehicle_fuel_consumption = []
         for vehicle_route in vehicles:
             fc = 0
@@ -679,7 +679,7 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
                 current_demand = 0 if vehicle_route[i] in start_positions else int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
                 demands =  demand_data.T.loc["Demand(kg)"].astype(int).to_numpy()
 
-                fc += fuel_consumption_rakha(vehicle_route[i],vehicle_route[i+1],distance_matrix,time_matrix,demands,total_weight,start_positions,meta_data)
+                fc += fuel_consumption_wong(vehicle_route[i],vehicle_route[i+1],distance_matrix,time_matrix,demands,total_weight,start_positions,meta_data)
                 total_weight += current_demand
 
                 
@@ -753,8 +753,8 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
     vehicle_loads = _get_total_load(vehicles, demand_data)
     vehicle_fc_linear = _get_estimated_fuel_consumption_linear(vehicles, start_positions, demand_data, meta_data, distance_matrix)
     vehicle_avg_fc_linear = _get_avg_estimated_fuel_conspumtion(vehicle_distances, vehicle_fc_linear)
-    vehicle_fc_rakha = _get_estimated_fuel_consumption_rakha(vehicles, start_positions, demand_data, meta_data, distance_matrix, travel_time_matrix)
-    vehicle_avg_fc_rakha = _get_avg_estimated_fuel_conspumtion(vehicle_distances, vehicle_fc_rakha)
+    vehicle_fc_wong = _get_estimated_fuel_consumption_wong(vehicles, start_positions, demand_data, meta_data, distance_matrix, travel_time_matrix)
+    vehicle_avg_fc_wong = _get_avg_estimated_fuel_conspumtion(vehicle_distances, vehicle_fc_wong)
     vehicle_total_travel_time = _get_total_travel_time(vehicles, travel_time_matrix)
     vehicle_avg_speed = _get_avg_speed(vehicle_distances, vehicle_total_travel_time)
     
@@ -763,8 +763,8 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
     results["Total load (kg)"] = np.array(vehicle_loads)
     results["Total Estimated Fuel Consumption (L) (Hao et al.)"] = vehicle_fc_linear
     results["Avg Estimated Fuel Conspumtion (L/100km) (Hao et al.)"] = vehicle_avg_fc_linear
-    results["Total Estimated Fuel Consumption (L) (Rakha et al.)"] = vehicle_fc_rakha
-    results["Avg Estimated Fuel Conspumtion (L/100km) (Rakha et al.)"] = vehicle_avg_fc_rakha
+    results["Total Estimated Fuel Consumption (L) (Wong et al.)"] = vehicle_fc_wong
+    results["Avg Estimated Fuel Conspumtion (L/100km) (Wong et al.)"] = vehicle_avg_fc_wong
     results["Avg Speed (km/h)"] = vehicle_avg_speed  
     results["Total Travel Time (s)"] = vehicle_total_travel_time
     results["Travel Time hh:mm:ss"] = _format_time(vehicle_total_travel_time)
@@ -784,7 +784,7 @@ def generate_final_results(results:list, comp_times:list) -> pd.DataFrame:
     data_df = pd.concat(results_summed, axis=1, ignore_index=True).T
     data_df.drop(columns=["Travel Time hh:mm:ss", "Total Travel Time (s)"], inplace=True)
     data_df["Computaion Time"] = comp_times
-    for axs in ["Avg Estimated Fuel Conspumtion (L/100km) (Hao et al.)", "Avg Estimated Fuel Conspumtion (L/100km) (Rakha et al.)", "Avg Speed (km/h)"]:
+    for axs in ["Avg Estimated Fuel Conspumtion (L/100km) (Hao et al.)", "Avg Estimated Fuel Conspumtion (L/100km) (Wong et al.)", "Avg Speed (km/h)"]:
         data_df[axs] = data_df[axs]/n_vehicles
     
     result_df = pd.concat({"Max":data_df.max(axis=0),
@@ -795,22 +795,65 @@ def generate_final_results(results:list, comp_times:list) -> pd.DataFrame:
     
     return result_df
 
-def fuel_consumption_rakha(from_node,to_node,distance_matrix,time_matrix,demands,vehicle_weight,start_positions,meta_data):
+def fuel_consumption_wong(from_node,to_node,distance_matrix,time_matrix,demands,vehicle_weight,start_positions,meta_data):
     """
-    Returns the estimated fuel consumption between two nodes.
+    Returns the estimated fuel consumption between two nodes in KILOGRAMS.
     Assumes an acceleration and road gradient of 0
-    Based on 'Virginia Tech Comprehensive Power-Based Fuel Consumption Model:Model development and testing' by Rakha et al. (2011) 
+    Based on 'Virginia Tech Comprehensive Power-Based Fuel Consumption Model:Model development and testing' by Wong et al. (2011) 
     Rakha et al. mentiones the follwing source:
     https://books.google.se/books?hl=sv&lr=&id=Blp2D1DteTYC&oi=fnd&pg=PR11&dq=Theory+of+Ground+Vehicles+J.Y.+Wong&ots=Xump_f09hf&sig=SMj4XXTZlJYlep9qNLTltx4zFHg&redir_esc=y
     """
-    function_data = get_fuel_data_rakha()
+    function_data = get_fuel_data_wong()
     
     distance = distance_matrix.iloc[from_node][to_node]
     
     demand = 0 if from_node in start_positions else demands[from_node]
     
     current_speed = distance/time_matrix.iloc[from_node][to_node]
-    specific_fuel_consumption = function_data["diesel_density"] * (meta_data["F-C Empty (l/100km)"]/1e5)*current_speed/function_data["engine_breaking_effect"]
+    
+    # Removed multiplication with function_data["diesel_density"]  to keep the fuel consumption in liters 
+    specific_fuel_consumption = (meta_data["F-C Empty (l/100km)"]/1e5)*current_speed/function_data["engine_breaking_effect"]
+    
+    current_speed_km_h = current_speed * 3.6
+    curb_weight =  demand + vehicle_weight
+    g = 9.8066
+    
+    
+    R = (function_data["air_density"]/25.92) * function_data["drag"] * function_data["frontal_area"] * current_speed_km_h**2 + \
+        g * curb_weight * (function_data["rolling_coeff"]/1000) * (function_data["c1"] * current_speed_km_h + function_data["c2"])
+    
+    P = R/(3600*0.45) * current_speed_km_h
+    
+    F = specific_fuel_consumption * (((function_data["engine_internal_friction"] * function_data["no_revolution"] * function_data["engine_displacement"])/2000) + P)
+    
+    fuel_consumption  = F*time_matrix.iloc[from_node][to_node]
+
+    
+    return np.float(fuel_consumption)
+
+
+def fuel_consumption_wong_cumulative_SFC(from_node,to_node,distance_matrix,time_matrix,demands,vehicle_weight,start_positions,meta_data):
+    """
+    Returns the estimated fuel consumption between two nodes in KILOGRAMS.
+    Assumes an acceleration and road gradient of 0
+    Based on 'Virginia Tech Comprehensive Power-Based Fuel Consumption Model:Model development and testing' by Rakha et al. (2011) 
+    Rakha et al. mentiones the follwing source:
+    https://books.google.se/books?hl=sv&lr=&id=Blp2D1DteTYC&oi=fnd&pg=PR11&dq=Theory+of+Ground+Vehicles+J.Y.+Wong&ots=Xump_f09hf&sig=SMj4XXTZlJYlep9qNLTltx4zFHg&redir_esc=y
+    """
+    function_data = get_fuel_data_wong()
+    
+    distance = distance_matrix.iloc[from_node][to_node]
+    
+    demand = 0 if from_node in start_positions else demands[from_node]
+    
+    current_speed = distance/time_matrix.iloc[from_node][to_node]
+    
+    load_rate = ((vehicle_weight-3000) + demand) / float(meta_data['Max Load(kg)'])
+    
+    fc = meta_data['F-C Empty (l/100km)'] + (load_rate * (meta_data['F-C Full (l/100km)'] - meta_data['F-C Empty (l/100km)']))
+    
+    # Removed multiplication with function_data["diesel_density"]  to keep the fuel consumption in liters 
+    specific_fuel_consumption = (fc/1e5)*current_speed/function_data["engine_breaking_effect"]
     
     current_speed_km_h = current_speed * 3.6
     curb_weight =  demand + vehicle_weight
