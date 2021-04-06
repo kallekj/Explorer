@@ -1,0 +1,12 @@
+\begin{tabular}{llrrrrrrr}
+\toprule
+{} & Algorithm &  Parameter Group &  Mutation &  Crossover &  Fuel Consumption Mean &  Fuel Consumption Std &  Total Drive Time Mean &  Total Drive Time Std \\
+\midrule
+0 &  NSGA-III &               41 &       0.9 &       0.35 &              48.936111 &              5.417407 &             415.193889 &             28.256348 \\
+1 &   NSGA-II &               33 &       0.7 &       0.65 &              48.975022 &              4.681595 &             414.712778 &             26.168383 \\
+2 &      IBEA &               40 &       0.9 &       0.20 &              49.583738 &              5.024197 &             416.757222 &             22.053599 \\
+3 &        GA &               37 &       0.8 &       0.50 &              52.338119 &              5.904486 &             421.557778 &             23.756203 \\
+4 &        SA &               24 &       0.9 &        NaN &              53.128724 &              6.674067 &             427.077778 &             27.866891 \\
+5 &        LS &                6 &       0.7 &        NaN &              53.421563 &              7.562976 &             431.760000 &             32.035772 \\
+\bottomrule
+\end{tabular}
