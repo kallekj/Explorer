@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import seaborn as sns
+import scipy as sp
 
 def get_vehicle_color_map(vehicles):
     
@@ -83,3 +85,78 @@ def plot_routes_with_congestion(vehicle_solutions, points_coordinate, dbf,conges
     
         
     return fig,ax
+
+def plot_conv_curves(curves, labels, markerKwargs={}, lineKwargs={"SA":{"color":"#1f77b4"}, "NSGAII": {"color":"#ff7f0e"}, "NSGAIII":{"color":"#2ca02c"}, "IBEA":{"color":"#d62728"}, "IBEA-Adaptive":{"color":"#9467bd", "linestyle":"--"}, "LS":{"color":"#8c564b"}, "GA":{"color":"#e377c2"}},show_domination_and_percentage_interval=True):
+    plt.style.use("../src/style/custom-seaborn-2dplot.mplstyle")
+    fig, ax = plt.subplots(1,1)
+    for label,curve in zip(labels, curves):
+        if label in lineKwargs.keys():
+            ax.plot(curve, label = r"$\bf{%s}$" % (label), **lineKwargs[label])
+        else:
+            ax.plot(curve, label = r"$\bf{%s}$" % (label))
+        
+    if show_domination_and_percentage_interval:
+        xs = np.arange(0,len(plot_data_NSGAIII["fuel_consumption"][0]))
+        domination_index = find_domination_point(curves)[1]
+        ax.axvline(xs[domination_index], linestyle='--', color='gray')
+
+        markPos = find_fithess_within_percentage(curves,0.01)
+
+        for pos,curve,label in zip(markPos, curves, labels):
+            if label in markerKwargs.keys():
+                ax.plot(xs[pos], curve[pos], **markerKwargs[label])
+            else:
+                ax.plot(xs[pos], curve[pos], color="black", marker="X", markersize="15")
+    
+    return ax, fig
+
+def plot_3d(datapoints, time_matrix, marker_kwargs={"SA":{"color":"#1f77b4", "marker":"o"}, "NSGA-II": {"color":"#ff7f0e", "marker":"P"}, "NSGAIII":{"color":"#2ca02c", "marker":"s"}, "IBEA":{"color":"#d62728", "marker":"D"}, "IBEA-Adaptive":{"color":"#9467bd", "marker":">"}, "LS":{"color":"#8c564b", "marker":"X"}, "GA":{"color":"#e377c2", "marker":"p"}}):
+    
+    def _mean_confidence_interval(data, confidence=0.95):
+        a = 1.0 * np.array(data)
+        n = len(a)
+        m, se = np.mean(a), sp.stats.sem(a)
+        h = se * sp.stats.t.ppf((1 + confidence) / 2., n-1)
+        return m, m-h, m+h
+
+
+    def _get_total_drive_times_from_paths(paths, time_matrix):
+        drive_times = []
+
+        for path in paths:
+            drive_time = 0
+            for route in path:
+                for index in range(len(route)-1):
+                    drive_time += time_matrix.iloc[route[index]][route[index+1]]
+
+            drive_times.append(drive_time/60)
+
+        return drive_times
+    
+    plt.style.use("../src/style/custom-seaborn-3dplot.mplstyle")
+    fig,ax = plt.subplots(1,1,subplot_kw={"projection": "3d"})
+    for data in datapoints:
+        label = data.iloc[0].algorithm
+        fuel_consumptions = np.array(data.fuel_consumption_final)#np.array( [x[0] for x in data.fitness_final])
+        if label in ["SA", "LS", "GA"]:
+            drive_times = np.array(_get_total_drive_times_from_paths(data.paths_final,time_matrix))
+        else:
+            drive_times = np.array([x[1] for x in data.fitness_final])
+        compute_times = np.array(data.optimal_time)
+        
+        mean_f0,min_f0,max_f0 = _mean_confidence_interval(fuel_consumptions)
+        mean_f1,min_f1,max_f1 = _mean_confidence_interval(drive_times)
+        mean_f2,min_f2,max_f2 = _mean_confidence_interval(compute_times)
+        
+        #print(mean_f1,min_f1,max_f1)
+        ax.plot([min_f0,max_f0],[mean_f1,mean_f1],[mean_f2,mean_f2],zorder=1, c="k")
+        ax.plot([mean_f0,mean_f0],[min_f1,max_f1],[mean_f2,mean_f2],zorder=1, c="k")
+        ax.plot([mean_f0,mean_f0],[mean_f1,mean_f1],[min_f2,max_f2],zorder=1, c="k")
+        plotlabel = r"$\bf{" + label + "}$" + ":\nFC - {} - $\mu$:{} - {}\nDT - {} - $\mu$:{} - {}\nCT - {} - $\mu$:{} - {}".format(
+                                                                                 round(min_f0,2),round(mean_f0,2),round(max_f0,2),
+                                                                                 round(min_f1,2),round(mean_f1,2),round(max_f1,2),
+                                                                                 round(min_f2,2),round(mean_f2,2),round(max_f2,2))
+        
+        ax.scatter(xs= mean_f0, ys=mean_f1, zs=mean_f2, label=plotlabel, s=250, **marker_kwargs[label], zorder=2)
+        # ax.scatter(xs= mean_f0,ys=mean_f1,zs=mean_f2,label=plotlabel,s=200,marker=marker,zorder=2,color=sns.color_palette("deep",10)[1])
+    return ax
