@@ -86,6 +86,30 @@ def plot_routes_with_congestion(vehicle_solutions, points_coordinate, dbf,conges
         
     return fig,ax
 
+
+def getDriveTimesForRoutes(paths,timeMatrix,startNodes):
+    routeTimes = []
+    
+    for path in paths:
+        driveTimes = {}
+        for start in startNodes:
+            driveTimes[start] = 0
+        
+        
+        for route in path:
+            currentStart = route[0]
+            #driveTimes[currentStart] = 0
+            driveTime = 0
+            for index in range(len(route)-1):
+                driveTimes[currentStart]  += timeMatrix.iloc[route[index]][route[index+1]]/60
+        
+        for start in startNodes:
+            if not start in driveTimes.keys():
+                driveTimes[start] = 0
+            
+        
+        routeTimes.append(driveTimes)
+    return routeTimes
 def plot_conv_curves(curves, labels, markerKwargs={}, lineKwargs={"SA":{"color":"#1f77b4"}, "NSGAII": {"color":"#ff7f0e"}, "NSGAIII":{"color":"#2ca02c"}, "IBEA":{"color":"#d62728"}, "IBEA-Adaptive":{"color":"#9467bd", "linestyle":"--"}, "LS":{"color":"#8c564b"}, "GA":{"color":"#e377c2"}},show_domination_and_percentage_interval=True):
     plt.style.use("../src/style/custom-seaborn-2dplot.mplstyle")
     fig, ax = plt.subplots(1,1)

@@ -5,6 +5,12 @@ import copy
 def cheapest_insertion_dict(nodes,vehicles,end_positions,routing_context,set_nearest_ends=False):
     
     def _get_total_path_capacity(path,locationNodes):
+#         result = 0
+#         for p in path:
+#             print(p)
+#             result += int(routing_context.station_data.iloc[p]["Demand(kg)"]) if type(p) != str else 0
+#         return result
+        
         return np.sum([ int(routing_context.station_data.iloc[p]["Demand(kg)"]) if type(p) != str else 0 for p in path])
 
     paths = [[x] for x in vehicles.keys()]
@@ -17,20 +23,24 @@ def cheapest_insertion_dict(nodes,vehicles,end_positions,routing_context,set_nea
         for node in visit_us:
             for path_index,path in enumerate(paths):
                 maxLoad = vehicles[path[0]]["maxLoad"]
-                startPos = vehicles[path[0]]["startPos"]
+                startPos = vehicles[path[0]]["startPos"] % len(routing_context.distance_matrix)
+                nodePos = node % len(routing_context.distance_matrix)
                 if len(path) == 1:
-                    cost = routing_context.distance_matrix[startPos][node]
+                    
+                    cost = routing_context.distance_matrix[startPos][nodePos]
                 else:
-                    cost = routing_context.distance_matrix[path[-1]][node]
+                    cost = routing_context.distance_matrix[path[-1] %  len(routing_context.distance_matrix)][nodePos]
                     
                 if cost < cheapest_cost:
                     
-                    if _get_total_path_capacity(path,nodes) < maxLoad:
+                    temp_path = copy.copy(path)
+                    temp_path.append(node)
+                    if _get_total_path_capacity(temp_path,nodes) < maxLoad:
                         cheapest_ins = (path_index,node)
                         cheapest_cost = cost
                         
         paths[cheapest_ins[0]].append(cheapest_ins[1])
-
+        
         visit_us.remove(cheapest_ins[1])
     
     temp_ends = copy.copy(end_positions)
@@ -56,7 +66,7 @@ def cheapest_insertion_dict(nodes,vehicles,end_positions,routing_context,set_nea
 
     else:
         for ind,path in enumerate(paths):
-            path.append(100+ind)
+            path.append(-1 - ind)
 
             
     return {"paths":paths,"flattened":list(chain(*paths))}
