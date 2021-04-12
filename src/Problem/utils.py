@@ -159,7 +159,7 @@ def generate_large_distance_matrix(coordinates, api_key=""):
     return distance_matrix_df, travel_time_matrix_df, error_matrix_df
     
     
-def generate_coordinates(station_data,location_context="", to_csv=False, filename=""):
+def generate_coordinates(station_data,location_context="", to_csv=False, filename="", timeout=4):
     """
         Generates a dataframe with coordinates from locations with Nominatim.
         
@@ -173,18 +173,35 @@ def generate_coordinates(station_data,location_context="", to_csv=False, filenam
     station_names = station_data["City Name"].values
     geolocator = Nominatim(user_agent="Explorer")
     coordinates = {"City Name": station_names, "lat":[], "lng":[]}
+    error_locations = []
     with tqdm(total=station_names.shape[0]) as pbar:
         for city in station_names:
             city = city.replace("_", " ")
-            location = geolocator.geocode("{}, {}".format(city,location_context))
-        
-            
-            pbar.set_description("[City: %s] [lat: %f] [lng: %f]" % (city, location.latitude, location.longitude))
-            coordinates["lat"].append(location.latitude)
-            coordinates["lng"].append(location.longitude)
+            try:
+                location = geolocator.geocode("{}, {}".format(city,location_context), timeout=timeout)
+                pbar.set_description("[City: %s] [lat: %f] [lng: %f]" % (city, location.latitude, location.longitude))
+                coordinates["lat"].append(location.latitude)
+                coordinates["lng"].append(location.longitude)
+            except:
+                error_locations.append(city)
             time.sleep(1.2) # Maximum of one request per second
             pbar.update()
     
+    error_counter = 0
+    while (len(error_locations) > 0) and (error_counter < 20): 
+        with tqdm(total=len(error_locations)) as pbar:
+            for city in error_locations:
+                try:
+                    location = geolocator.geocode("{}, {}".format(city,location_context), timeout=timeout)
+                    error_locations.remove(city)
+                    pbar.set_description("[City: %s] [lat: %f] [lng: %f]" % (city, location.latitude, location.longitude))
+                    coordinates["lat"].append(location.latitude)
+                    coordinates["lng"].append(location.longitude)
+                except:
+                    error_counter += 1
+                time.sleep(1.2) # Maximum of one request per second
+                pbar.update()
+
     data = pd.DataFrame(coordinates)
     
     if to_csv:
