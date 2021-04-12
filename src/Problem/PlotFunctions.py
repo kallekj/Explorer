@@ -83,3 +83,28 @@ def plot_routes_with_congestion(vehicle_solutions, points_coordinate, dbf,conges
     
         
     return fig,ax
+
+
+def getDriveTimesForRoutes(paths,timeMatrix,startNodes):
+    routeTimes = []
+    
+    for path in paths:
+        driveTimes = {}
+        for start in startNodes:
+            driveTimes[start] = 0
+        
+        
+        for route in path:
+            currentStart = route[0]
+            #driveTimes[currentStart] = 0
+            driveTime = 0
+            for index in range(len(route)-1):
+                driveTimes[currentStart]  += timeMatrix.iloc[route[index]][route[index+1]]/60
+        
+        for start in startNodes:
+            if not start in driveTimes.keys():
+                driveTimes[start] = 0
+            
+        
+        routeTimes.append(driveTimes)
+    return routeTimes

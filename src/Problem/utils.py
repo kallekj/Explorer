@@ -678,7 +678,7 @@ def get_results(vehicles:list, distance_matrix:pd.DataFrame, demand_data:pd.Data
             total_weight = copy(meta_data["Vehicle Weight"])
             for i in range(len(vehicle_route) - 1):
 
-                current_demand = 0 if vehicle_route[i] in start_positions else int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
+                current_demand = int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])#0 if vehicle_route[i] in start_positions else int(demand_data.iloc[vehicle_route[i]]["Demand(kg)"])
                 demands =  demand_data.T.loc["Demand(kg)"].astype(int).to_numpy()
 
                 fc += fuel_consumption_wong(vehicle_route[i],vehicle_route[i+1],distance_matrix,time_matrix,demands,total_weight,start_positions,meta_data)
@@ -809,10 +809,11 @@ def fuel_consumption_wong(from_node,to_node,distance_matrix,time_matrix,demands,
     
     distance = distance_matrix[from_node][to_node]
     
-    demand = 0 if from_node in start_positions else demands[from_node]
+    demand = demands[from_node]#0 if from_node in start_positions else demands[from_node]
     
     current_speed = distance/time_matrix[from_node][to_node]
-    
+    if time_matrix[from_node][to_node] == 0:
+        current_speed = 0
     # Removed multiplication with function_data["diesel_density"]  to keep the fuel consumption in liters 
     specific_fuel_consumption = (meta_data["F-C Empty (l/100km)"]/1e5)*current_speed/function_data["engine_breaking_effect"]
     
@@ -825,6 +826,10 @@ def fuel_consumption_wong(from_node,to_node,distance_matrix,time_matrix,demands,
         g * curb_weight * (function_data["rolling_coeff"]/1000) * (function_data["c1"] * current_speed_km_h + function_data["c2"])
     
     P = R/(3600*0.45) * current_speed_km_h
+    
+    if current_speed_km_h == 0:
+        P = 0
+    
     
     F = specific_fuel_consumption * (((function_data["engine_internal_friction"] * function_data["no_revolution"] * function_data["engine_displacement"])/2000) + P)
     

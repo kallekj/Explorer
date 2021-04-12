@@ -1,6 +1,8 @@
 from Problem.utils import *
 from enum import Enum
-
+import numpy as np
+from copy import copy
+from Problem.VehicleFunctions import get_numerical_path
 class FuelConstants(float,Enum):
     FUEL_TO_AIR_RATIO = 1
     G = 9.91
@@ -20,15 +22,18 @@ class FuelConstants(float,Enum):
     LAMBDA = 3.0837547798199085e-05
     GAMMA = 0.0022500000000000003
 
-   
 
+def mod77(x):
+    return x % 77
 
 def fuel_consumption_rauniyar_dev(distances,driveTimes,cumulative_weight):
-
+    np.seterr(divide='ignore', invalid='ignore')
     vehicle_speeds = distances/driveTimes
-
+    vehicle_speeds = np.nan_to_num(vehicle_speeds)
+    
     first_term = (FuelConstants.ENGINE_FRICTION* FuelConstants.ENGINE_SPEED * FuelConstants.ENGINE_DISPLACEMENT * distances)/vehicle_speeds
-
+    first_term = np.nan_to_num(first_term)
+    
     second_term = cumulative_weight * FuelConstants.GAMMA * FuelConstants.ALPHA * distances
 
     third_term = FuelConstants.BETA * FuelConstants.GAMMA * distances * (vehicle_speeds**2)
@@ -42,8 +47,12 @@ def evaluate_fitness(solution,routing_context,vehicles):
     solution.vehicle_fuel_consumptions = []
     solution.vehicle_route_times = []
     solution.vehicle_loads = []
+    
+    
     for vehicle_route in solution.path:
-        
+            
+            
+            
             current_vehicle = vehicle_route[0]
             vehicle_load = 0
             vehicle_fuel_consumption = 0
@@ -55,13 +64,14 @@ def evaluate_fitness(solution,routing_context,vehicles):
             current_path = np.array(vehicle_route)
             current_path[0] = vehicles[current_vehicle]["startPos"]
             current_path = current_path.astype(int)
+            distance_time_route_vector = np.array(list(map(mod77,current_path)))
             
-            current_path_shifted = np.roll(current_path,-1)
+            current_path_shifted_distance_time = np.roll(distance_time_route_vector,-1)
             
-            route_distances = (routing_context.distance_matrix[current_path,current_path_shifted])[:-1]
+            route_distances = (routing_context.distance_matrix[distance_time_route_vector,current_path_shifted_distance_time])[:-1]
             route_dist = np.sum(route_distances)
             
-            route_times = (routing_context.time_matrix[current_path,current_path_shifted])[:-1]
+            route_times = (routing_context.time_matrix[distance_time_route_vector,current_path_shifted_distance_time])[:-1]
             demands = routing_context.customer_demands[current_path][:-1]
             #demands[0] = 0
           

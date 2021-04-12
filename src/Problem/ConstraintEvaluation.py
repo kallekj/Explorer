@@ -1,7 +1,7 @@
 from itertools import chain
 import numpy as np
 
-def evaluate_constraints(solution,routingContext,pickup_points,end_positions,vehicles,max_allowed_drivetime:int):
+def evaluate_constraints(solution,routingContext,pickup_points,end_positions,vehicles,max_allowed_drivetime:int,min_allowed_drivetime=4*60*60):
     def __correctStart(paths):
         errCounter = 0
         for path in paths:
@@ -18,7 +18,12 @@ def evaluate_constraints(solution,routingContext,pickup_points,end_positions,veh
         total_overload=0
         for path in paths:
             capacity = vehicles[path[0]]["maxLoad"]
-            pickups = path[1:-1]
+#             if len(path) > 2:
+#                 pickups = path[1:-1]
+#             else:
+            pickups = path[:-1]
+            pickups[0] = vehicles[path[0]]["startPos"]
+            
             loads  = routingContext.customer_demands[pickups]
             total_load = np.cumsum(loads)[-1]
             if total_load > capacity:
@@ -59,8 +64,11 @@ def evaluate_constraints(solution,routingContext,pickup_points,end_positions,veh
 
     if max(solution.vehicle_route_times) > (max_allowed_drivetime):
         constraints[3] = max_allowed_drivetime - max(solution.vehicle_route_times)
-        flags.append("time")
-
+        flags.append("overtime")
+    
+    if min(solution.vehicle_route_times) < min_allowed_drivetime:
+        constraints[5] = min(solution.vehicle_route_times) - min_allowed_drivetime
+        flags.append("undertime")
     
     final_path_positions = [solution.path[-1]  for path in solution.path]
     faultyEndpoints = __checkEndPoints(final_path_positions)
