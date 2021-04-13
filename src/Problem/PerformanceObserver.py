@@ -8,14 +8,17 @@ import numpy as np
 LOGGER = logging.getLogger('jmetal')
 # UPDATE OBSERVER TO GET BEST FUEL CONSUMPTION FROM THE SOLUTION IN THE CURRENT PARETO FRONT WITH THE BEST CONSUMPTION
 
-def store_plot_data(plot_data_storage,performance_observer,current_path):
+def store_plot_data(plot_data_storage,performance_observer,current_solution):
+    current_path = current_solution.path
     plot_data_storage['fitness'].append(performance_observer.performances)
     plot_data_storage['fuel_consumption'].append(performance_observer.total_consumptions)
     plot_data_storage['computation_times'].append(performance_observer.computationTimes)
-    plot_data_storage['maxDriveTimes'].append(performance_observer.maxDriveTimes)
     plot_data_storage['violation'].append(performance_observer.violations)
     plot_data_storage['paths'].append(current_path)
-    plot_data_storage['IGD'].append(performance_observer.IGD_values)
+    plot_data_storage['vehicle_route_time'].append(current_solution.vehicle_route_times)
+    plot_data_storage['route_distance'].append(current_solution.vehicle_route_distances)
+    plot_data_storage['vehicle_loads'].append(current_solution.vehicle_loads)
+
 
 
     
@@ -45,7 +48,7 @@ class PerformanceObserver(Observer):
         self.fronts = []
         self.front_history = []
         self.path_history = []
-        
+        self.route_Drive_times = []
         
     def update(self, *args, **kwargs):
         computing_time = kwargs['COMPUTING_TIME']
@@ -85,7 +88,7 @@ class PerformanceObserver(Observer):
                 self.violations.append(overall_constraint_violation_degree(solution))
                 self.average_computing_speed = round(evaluations/computing_time,2)
                 self.path_history.append(current_route)
-                
+                self.route_Drive_times = solution.vehicle_route_times
                 clear_output(wait=True)
                 if len(fitness) == 1:
                     self.currentIGD = self.IGD.compute([[self.currentBestFuelConsumption,self.currentBestDriveTime]])

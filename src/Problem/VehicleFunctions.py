@@ -10,7 +10,19 @@ def initializeVehicles(startIndices,vehicleData,routingContext,heterogeneousFlee
             ID = "V{}".format(index)
             vehicleDict[ID] = {"emptyWeight":emptyWeight,"maxLoad":maxLoad,
                                "fuelConsumptionEmpty":fuelEmpty,"fuelConsumptionFull":fuelFull,"startPos":startPos}
-            
+    else:
+        for index, startPos in enumerate(startIndices):
+            for vehicle_type in range(2):
+
+                emptyWeight = vehicleData["emptyWeights"][vehicle_type]
+                maxLoad = vehicleData["maxLoads"][vehicle_type]
+                fuelEmpty = vehicleData["fuelEmpty"][vehicle_type]
+                fuelFull = vehicleData["fuelFull"][vehicle_type]
+                ID = "V{}".format(index*2 + vehicle_type)
+                vehicleDict[ID] = {"emptyWeight":emptyWeight,"maxLoad":maxLoad,
+                                   "fuelConsumptionEmpty":fuelEmpty,"fuelConsumptionFull":fuelFull,"startPos":startPos}
+
+        
             
             
 
