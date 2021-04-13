@@ -32,26 +32,19 @@ def shuffle_paths(variables,ends=None):
 
     return result
 
-def shuffle_paths2(variables,ends=None):
-    result = []
-    end_indices = []
-    pattern = r'V.'
+def shuffle_paths2(initial_solution):
+    shuffled_paths = copy(initial_solution["paths"])
     
-    variables_np = np.array([v for v in variables])
-    list(map( lambda x :bool(re.match(pattern,x)),variables_np))
-    print(variables_np)
-    end_indices = np.where(variables_np < 0)[0]
-    prevIndex = 0
-    for endIndex in end_indices:
-        sub_list = variables[prevIndex:endIndex]
-        sub_list = random.sample(sub_list,k=len(sub_list))
-        sub_list.append(variables[endIndex])
-        
-        prevIndex=endIndex+1  
-        
-        result.extend(sub_list)
-
-    return result
+    for index,sol in enumerate(shuffled_paths):
+        if len(sol) >2:
+            start_pos = sol[0]
+            shuffled_pickups = random.sample(sol[1:-1],k=len(sol[1:-1]))
+            end_pos = sol[-1]
+            shuffled_paths[index] = [start_pos] + shuffled_pickups + [end_pos]
+    return list(chain(*shuffled_paths))
+    
+    
+    
 
 class VRP(PermutationProblem):
     
@@ -139,7 +132,7 @@ class VRP(PermutationProblem):
             solution.objectives[1] = solution.longest_DriveTime 
             
         if len(solution.objectives) == 1:
-            solution.objectives[0] = solution.totalFuelConsumption +  solution.total_DriveTime #
+            solution.objectives[0] = solution.totalFuelConsumption +  solution.longest_DriveTime #
             
         return solution
     
@@ -151,10 +144,10 @@ class VRP(PermutationProblem):
                                            number_of_constraints=self.number_of_constraints)        
         
         #new_solution.variables = self.initial_solution
-        new_solution.variables = self.initial_solution#random.sample(self.initial_solution,k=len(self.initial_solution))
+        new_solution.variables = self.initial_solution["flattened"]#random.sample(self.initial_solution,k=len(self.initial_solution))
         if not self.name in ["SA","LS"]:
-            if random.random() < 0.5:
-                new_solution.variables = random.sample(self.initial_solution,k=len(self.initial_solution))
+            if random.random() < 0.8:
+                new_solution.variables = shuffle_paths2(self.initial_solution)#random.sample(self.initial_solution,k=len(self.initial_solution))
       
         return new_solution
         

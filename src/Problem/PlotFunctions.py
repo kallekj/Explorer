@@ -110,7 +110,7 @@ def getDriveTimesForRoutes(paths,timeMatrix,startNodes):
         
         routeTimes.append(driveTimes)
     return routeTimes
-def plot_conv_curves(curves, labels, markerKwargs={}, lineKwargs={"SA":{"color":"#1f77b4"}, "NSGAII": {"color":"#ff7f0e"}, "NSGAIII":{"color":"#2ca02c"}, "IBEA":{"color":"#d62728"}, "IBEA-Adaptive":{"color":"#9467bd", "linestyle":"--"}, "LS":{"color":"#8c564b"}, "GA":{"color":"#e377c2"}},show_domination_and_percentage_interval=True):
+def plot_conv_curves(curves, labels, markerKwargs={}, lineKwargs={"SA":{"color":"#1f77b4"}, "NSGAII": {"color":"#ff7f0e"}, "NSGAIII":{"color":"#2ca02c"}, "IBEA":{"color":"#d62728"}, "IBEA-Adaptive":{"color":"#9467bd", "linestyle":"--"}, "UNSGAIII":{"color":"#8c564b"}, "GA":{"color":"#e377c2"}},show_domination_and_percentage_interval=True,y_lim=None):
     plt.style.use("../src/style/custom-seaborn-2dplot.mplstyle")
     fig, ax = plt.subplots(1,1)
     for label,curve in zip(labels, curves):
@@ -120,7 +120,7 @@ def plot_conv_curves(curves, labels, markerKwargs={}, lineKwargs={"SA":{"color":
             ax.plot(curve, label = r"$\bf{%s}$" % (label))
         
     if show_domination_and_percentage_interval:
-        xs = np.arange(0,len(plot_data_NSGAIII["fuel_consumption"][0]))
+        xs = np.arange(0,len(curves[0]))
         domination_index = find_domination_point(curves)[1]
         ax.axvline(xs[domination_index], linestyle='--', color='gray')
 
@@ -131,7 +131,10 @@ def plot_conv_curves(curves, labels, markerKwargs={}, lineKwargs={"SA":{"color":
                 ax.plot(xs[pos], curve[pos], **markerKwargs[label])
             else:
                 ax.plot(xs[pos], curve[pos], color="black", marker="X", markersize="15")
+    if y_lim:
+        ax.set_ylim(y_lim[0],y_lim[1])            
     
+    plt.legend()
     return ax, fig
 
 def plot_3d(datapoints, time_matrix, marker_kwargs={"SA":{"color":"#1f77b4", "marker":"o"}, "NSGA-II": {"color":"#ff7f0e", "marker":"P"}, "NSGAIII":{"color":"#2ca02c", "marker":"s"}, "IBEA":{"color":"#d62728", "marker":"D"}, "IBEA-Adaptive":{"color":"#9467bd", "marker":">"}, "LS":{"color":"#8c564b", "marker":"X"}, "GA":{"color":"#e377c2", "marker":"p"}}):
@@ -160,12 +163,16 @@ def plot_3d(datapoints, time_matrix, marker_kwargs={"SA":{"color":"#1f77b4", "ma
     plt.style.use("../src/style/custom-seaborn-3dplot.mplstyle")
     fig,ax = plt.subplots(1,1,subplot_kw={"projection": "3d"})
     for data in datapoints:
-        label = data.iloc[0].algorithm
+        try:
+            label = data.iloc[0].algorithm
+        except:
+            label = data.iloc[0].Algorithm
         fuel_consumptions = np.array(data.fuel_consumption_final)#np.array( [x[0] for x in data.fitness_final])
-        if label in ["SA", "LS", "GA"]:
-            drive_times = np.array(_get_total_drive_times_from_paths(data.paths_final,time_matrix))
-        else:
-            drive_times = np.array([x[1] for x in data.fitness_final])
+        drive_times = data.vehicle_route_time
+#         if label in ["SA", "LS", "GA"]:
+#             drive_times = np.array(_get_total_drive_times_from_paths(data.paths_final,time_matrix))
+#         else:
+#             drive_times = np.array([x[1] for x in data.fitness_final])
         compute_times = np.array(data.optimal_time)
         
         mean_f0,min_f0,max_f0 = _mean_confidence_interval(fuel_consumptions)
