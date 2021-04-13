@@ -188,20 +188,26 @@ def generate_coordinates(station_data,location_context="", to_csv=False, filenam
             pbar.update()
     
     error_counter = 0
+    print("Len City Name: %s \n Lat: %d \n Long: %d" % (len(coordinates["City Name"]), len(coordinates["lat"]), len(coordinates["lng"])))
     while (len(error_locations) > 0) and (error_counter < 20): 
         with tqdm(total=len(error_locations)) as pbar:
             for city in error_locations:
                 try:
                     location = geolocator.geocode("{}, {}".format(city,location_context), timeout=timeout)
+                    if location == None:
+                        raise Exception("Error: Nominatim can't find the coordinates of %s in %s" % (city, location_context))
                     error_locations.remove(city)
+                    error_counter = 0
                     pbar.set_description("[City: %s] [lat: %f] [lng: %f]" % (city, location.latitude, location.longitude))
                     coordinates["lat"].append(location.latitude)
                     coordinates["lng"].append(location.longitude)
-                except:
+                except Exception as e: 
+                    print(e)
                     error_counter += 1
                 time.sleep(1.2) # Maximum of one request per second
                 pbar.update()
-
+    
+    print("Len City Name: %s \n Lat: %d \n Long: %d" % (len(coordinates["City Name"]), len(coordinates["lat"]), len(coordinates["lng"])))
     data = pd.DataFrame(coordinates)
     
     if to_csv:
