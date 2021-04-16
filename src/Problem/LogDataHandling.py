@@ -2,6 +2,7 @@ from ast import literal_eval
 import numpy as np 
 import pandas as pd 
 from Problem.PlotFunctions import *
+from copy import deepcopy
 mutation_arange = [np.round(x,2) for x in np.arange(0.1,1,0.2)]
 
 def plot_parameter_comparison(dataframe,column_name,y_lim=None,population_size=None):
