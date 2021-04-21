@@ -18,12 +18,14 @@ def store_plot_data(plot_data_storage,performance_observer,current_solution):
     plot_data_storage['vehicle_route_time'].append(current_solution.vehicle_route_times)
     plot_data_storage['route_distance'].append(current_solution.vehicle_route_distances)
     plot_data_storage['vehicle_loads'].append(current_solution.vehicle_loads)
-
+    plot_data_storage['distance_to_origin'].append(performance_observer.distances_to_origin)
 
 
     
 
 class PerformanceObserver(Observer):
+    
+   
     def __init__(self, max_iter:int,frequency: float = 1.0,params = []) -> None:
         """ Show the number of evaluations, best fitness and computing time.
         :param frequency: Display frequency. """
@@ -50,14 +52,23 @@ class PerformanceObserver(Observer):
         self.path_history = []
         self.route_Drive_times = []
         
+        self.distances_to_origin = []
+        
+     
+    
+    def euclidean_distance_to_origin(self,x,y):
+        return (x**2 + y**2)**0.5
+
     def update(self, *args, **kwargs):
         computing_time = kwargs['COMPUTING_TIME']
         evaluations = kwargs['EVALUATIONS']
         solutions = kwargs['SOLUTIONS']
         allSolutions = kwargs['SOLUTIONS']
         if type(solutions) == list:
+            best_solution = sorted(solutions,key=lambda solution: self.euclidean_distance_to_origin(*solution.objectives))[0]
+            
             self.fronts.append(get_non_dominated_solutions(solutions))
-            solution = get_non_dominated_solutions(solutions)[0]#solutions[0]
+            solution =best_solution
         else:
             solution = solutions
         runAmount = self.maxEpochs/len(self.params)
@@ -73,8 +84,10 @@ class PerformanceObserver(Observer):
                     self.performances.append(fitness[0])
                 else:
                     self.performances.append(fitness)
-                    
-                self.maxDriveTimes.append(max(solution.vehicle_route_times))
+                
+                
+                max_route_time = max(solution.vehicle_route_times)
+                self.maxDriveTimes.append(max_route_time)
                 self.total_consumptions.append(consumption)
                 self.computing_time = computing_time
                 current_route = solution.path
@@ -89,6 +102,12 @@ class PerformanceObserver(Observer):
                 self.average_computing_speed = round(evaluations/computing_time,2)
                 self.path_history.append(current_route)
                 self.route_Drive_times = solution.vehicle_route_times
+                
+                self.distances_to_origin.append(self.euclidean_distance_to_origin(consumption,max_route_time/60))
+                
+                
+                
+                
                 clear_output(wait=True)
                 if len(fitness) == 1:
                     self.currentIGD = self.IGD.compute([[self.currentBestFuelConsumption,self.currentBestDriveTime]])
@@ -124,3 +143,6 @@ class PerformanceObserver(Observer):
                 self.IGD_values.append(self.currentIGD)
                 
                 
+                
+                
+
