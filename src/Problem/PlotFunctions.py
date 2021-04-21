@@ -137,7 +137,7 @@ def plot_conv_curves(curves, labels, markerKwargs={}, lineKwargs={"SA":{"color":
     plt.legend()
     return ax, fig
 
-def plot_3d(datapoints, time_matrix, marker_kwargs={"SA":{"color":"#1f77b4", "marker":"o"}, "NSGA-II": {"color":"#ff7f0e", "marker":"P"}, "NSGAIII":{"color":"#2ca02c", "marker":"s"}, "IBEA":{"color":"#d62728", "marker":"D"}, "IBEA-Adaptive":{"color":"#9467bd", "marker":">"}, "LS":{"color":"#8c564b", "marker":"X"}, "GA":{"color":"#e377c2", "marker":"p"}}):
+def plot_3d(datapoints, time_matrix, marker_kwargs={"SA":{"color":"#1f77b4", "marker":"o"}, "NSGA-II": {"color":"#ff7f0e", "marker":"P"}, "NSGA-III":{"color":"#2ca02c", "marker":"s"}, "IBEA":{"color":"#d62728", "marker":"D"}, "IBEA-Adaptive":{"color":"#9467bd", "marker":">"}, "LS":{"color":"#8c564b", "marker":"X"}, "GA":{"color":"#e377c2", "marker":"p"}}):
     
     def _mean_confidence_interval(data, confidence=0.95):
         a = 1.0 * np.array(data)
@@ -190,4 +190,4 @@ def plot_3d(datapoints, time_matrix, marker_kwargs={"SA":{"color":"#1f77b4", "ma
         
         ax.scatter(xs= mean_f0, ys=mean_f1, zs=mean_f2, label=plotlabel, s=250, **marker_kwargs[label], zorder=2)
         # ax.scatter(xs= mean_f0,ys=mean_f1,zs=mean_f2,label=plotlabel,s=200,marker=marker,zorder=2,color=sns.color_palette("deep",10)[1])
-    return ax
+    return fig, ax
