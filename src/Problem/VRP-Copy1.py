@@ -46,7 +46,7 @@ def shuffle_paths2(initial_solution):
     
     
 
-class VRP(PermutationProblem):
+class VRP_pickup_and_drop(PermutationProblem):
     
     def __init__(self,problemData):
         check_type(problemData,dict)
@@ -75,6 +75,7 @@ class VRP(PermutationProblem):
         # This could be done through keeping track on the current load of the route,
         # when the load is over or equal to the vehicle capacity, insert the 
         # closest dropoff position into the route.
+        
         for index, node_index in enumerate(solution.variables):
             
             if type(node_index) != str:
