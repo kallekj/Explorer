@@ -67,7 +67,8 @@ def evaluate_constraints(solution,routingContext,pickup_points,end_positions,veh
         flags.append("overtime")
     
     if min(solution.vehicle_route_times) < min_allowed_drivetime:
-        constraints[5] = min(solution.vehicle_route_times) - min_allowed_drivetime
+        violations = list(filter(lambda x: x < min_allowed_drivetime,solution.vehicle_route_times))
+        constraints[5] = sum(violations) - min_allowed_drivetime*len(violations)
         flags.append("undertime")
     
     final_path_positions = [solution.path[-1]  for path in solution.path]
