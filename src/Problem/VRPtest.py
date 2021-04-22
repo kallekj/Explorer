@@ -143,7 +143,7 @@ class VRP_pickup_and_drop(PermutationProblem):
         #======================APPLY FITNESSVALUES=========================#
         if len(solution.objectives) == 2:
             solution.objectives[0] = solution.totalFuelConsumption
-            solution.objectives[1] = solution.longest_DriveTime - solution.shortest_DriveTime
+            solution.objectives[1] = solution.longest_DriveTime 
             
         if len(solution.objectives) == 1:
             solution.objectives[0] = solution.totalFuelConsumption +  solution.longest_DriveTime
