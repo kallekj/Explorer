@@ -21,7 +21,8 @@ def plot_parameter_comparison(dataframe,column_name,y_lim=None,population_size=N
         plot_curves.append(parameter_group_curves_mean)
         plot_labels.append(int(parameter_group))
     
-    plot_conv_curves(np.array(plot_curves),plot_labels,y_lim=y_lim)
+    fig, ax = plot_conv_curves(np.array(plot_curves),plot_labels,y_lim=y_lim)
+    return fig, ax
     
 
 
