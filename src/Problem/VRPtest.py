@@ -50,7 +50,7 @@ class VRP_pickup_and_drop(PermutationProblem):
     
     def __init__(self,problemData):
         check_type(problemData,dict)
-        super(VRP,self).__init__()
+        super(VRP_pickup_and_drop,self).__init__()
         
         self.routing_context = problemData["routing_context"]
         self.object_directions=[self.MINIMIZE,self.MINIMIZE]
@@ -75,20 +75,29 @@ class VRP_pickup_and_drop(PermutationProblem):
         # This could be done through keeping track on the current load of the route,
         # when the load is over or equal to the vehicle capacity, insert the 
         # closest dropoff position into the route.
-        
+        current_load = 0
+        vehicle_capacity = self.vehicles[paths[0][0]]["maxLoad"]
         for index, node_index in enumerate(solution.variables):
             
             if type(node_index) != str:
-
+                node_demand = self.routing_context.customer_demands[node_index]
                 if vehicle_index == len(paths):
                     solution.constraints[4] -= ((len(solution.variables)-1)-index)*100
                     paths[-1].append(node_index)
                 elif node_index < 0:
                     vehicle_index+=1
+                    current_load = 0
+                    try:
+                        vehicle_capacity = self.vehicles[paths[vehicle_index][0]]["maxLoad"]
+                    except:
+                        pass
                 else:
-
+                    if current_load + node_demand > vehicle_capacity:
+                        paths[vehicle_index].append(self.end_positions[int(np.argsort(self.routing_context.distance_matrix[node_index,self.end_positions])[0])]) 
+                        current_load = 0
+                        
                     paths[vehicle_index].append(node_index)
-
+                    current_load += node_demand
 
         filtered_path =list(filter(lambda path: len(path) > 1 ,paths))#or self.routing_context.customer_demands[self.vehicles[path[0]]["startPos"]] != 0 ,paths))
         filtered_path_with_ends = self.assingEndPositions(filtered_path)
@@ -124,7 +133,7 @@ class VRP_pickup_and_drop(PermutationProblem):
         solution.constraints,solution.flag = evaluate_constraints(solution=solution,routingContext=self.routing_context,pickup_points=self.pickup_points,
                                                                  end_positions=self.end_positions,vehicles=self.vehicles,max_allowed_drivetime=max_drivetime,min_allowed_drivetime=self.min_allowed_drivetime)
         
-        
+        solution.constraints[1]=0
         if self.name in ["SA","GA","IBEA"]:
             for constraint_val in solution.constraints:
                 solution.totalFuelConsumption += abs(constraint_val)
@@ -134,10 +143,10 @@ class VRP_pickup_and_drop(PermutationProblem):
         #======================APPLY FITNESSVALUES=========================#
         if len(solution.objectives) == 2:
             solution.objectives[0] = solution.totalFuelConsumption
-            solution.objectives[1] = unused_capacity 
+            solution.objectives[1] = solution.longest_DriveTime 
             
         if len(solution.objectives) == 1:
-            solution.objectives[0] = solution.totalFuelConsumption + unused_capacity #
+            solution.objectives[0] = solution.totalFuelConsumption +  solution.longest_DriveTime
             
         return solution
     
