@@ -92,7 +92,7 @@ class VRP_pickup_and_drop(PermutationProblem):
                     except:
                         pass
                 else:
-                    if current_load + node_demand >= vehicle_capacity:
+                    if current_load + node_demand > vehicle_capacity:
                         paths[vehicle_index].append(self.end_positions[int(np.argsort(self.routing_context.distance_matrix[node_index,self.end_positions])[0])]) 
                         current_load = 0
                         
