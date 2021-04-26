@@ -181,7 +181,7 @@ class VRP2(PermutationProblem):
         new_solution.variables = self.initial_solution["flattened"]
         if not self.name in ["SA","LS"]:
             if random.random() < 0.8:
-                new_solution.variables = shuffle_paths2(initial_solution)
+                new_solution.variables = shuffle_paths2(self.initial_solution)
         return new_solution
         
     def get_name(self):

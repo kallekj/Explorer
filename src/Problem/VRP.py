@@ -133,10 +133,10 @@ class VRP(PermutationProblem):
         #======================APPLY FITNESSVALUES=========================#
         if len(solution.objectives) == 2:
             solution.objectives[0] = solution.totalFuelConsumption
-            solution.objectives[1] = unused_capacity 
+            solution.objectives[1] = solution.longest_DriveTime 
             
         if len(solution.objectives) == 1:
-            solution.objectives[0] = solution.totalFuelConsumption + unused_capacity #
+            solution.objectives[0] = solution.totalFuelConsumption + solution.longest_DriveTime #
             
         return solution
     
