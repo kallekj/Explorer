@@ -77,6 +77,7 @@ class VRP_pickup_and_drop(PermutationProblem):
         # closest dropoff position into the route.
         current_load = 0
         vehicle_capacity = self.vehicles[paths[0][0]]["maxLoad"]
+        old_node = solution.variables[0]
         for index, node_index in enumerate(solution.variables):
             
             if type(node_index) != str:
@@ -93,13 +94,18 @@ class VRP_pickup_and_drop(PermutationProblem):
                         pass
                 else:
                     if current_load + node_demand > vehicle_capacity:
-                        paths[vehicle_index].append(self.end_positions[int(np.argsort(self.routing_context.distance_matrix[node_index,self.end_positions])[0])]) 
+                        #print("V",vehicle_index,"old",old_node,"n",node_index)
+                        paths[vehicle_index].append(self.end_positions[int(np.argsort(self.routing_context.distance_matrix[old_node,self.end_positions])[0])]) 
                         current_load = 0
                         
                     paths[vehicle_index].append(node_index)
                     current_load += node_demand
-
-        filtered_path =list(filter(lambda path: len(path) > 1 ,paths))#or self.routing_context.customer_demands[self.vehicles[path[0]]["startPos"]] != 0 ,paths))
+                
+                old_node = node_index
+            
+            
+            
+        filtered_path =list(filter(lambda path: len(path) > 1 ,paths))
         filtered_path_with_ends = self.assingEndPositions(filtered_path)
         return filtered_path_with_ends 
     
