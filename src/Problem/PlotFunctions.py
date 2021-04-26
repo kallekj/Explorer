@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import seaborn as sns
 import scipy as sp
-
+from copy import deepcopy
 def get_vehicle_color_map(vehicles):
     
     color_list = deepcopy(mcolors.TABLEAU_COLORS)

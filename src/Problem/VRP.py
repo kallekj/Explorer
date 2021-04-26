@@ -71,10 +71,7 @@ class VRP(PermutationProblem):
         
         paths = list([[x] for x in vehicle_order])
         vehicle_index=0
-        # Here one could implement the functionality for cars to return to a dropoff and then continue route.
-        # This could be done through keeping track on the current load of the route,
-        # when the load is over or equal to the vehicle capacity, insert the 
-        # closest dropoff position into the route.
+
         for index, node_index in enumerate(solution.variables):
             
             if type(node_index) != str:
@@ -148,10 +145,10 @@ class VRP(PermutationProblem):
                                            number_of_constraints=self.number_of_constraints)        
         
         #new_solution.variables = self.initial_solution
-        new_solution.variables = self.initial_solution["flattened"]#random.sample(self.initial_solution,k=len(self.initial_solution))
+        new_solution.variables = self.initial_solution["flattened"]
         if not self.name in ["SA","LS"]:
             if random.random() < 0.8:
-                new_solution.variables = shuffle_paths2(self.initial_solution)#random.sample(self.initial_solution,k=len(self.initial_solution))
+                new_solution.variables = shuffle_paths2(self.initial_solution)
       
         return new_solution
         
