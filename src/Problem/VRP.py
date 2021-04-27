@@ -133,7 +133,7 @@ class VRP(PermutationProblem):
             solution.objectives[1] = solution.longest_DriveTime 
             
         if len(solution.objectives) == 1:
-            solution.objectives[0] = solution.totalFuelConsumption + solution.longest_DriveTime #
+            solution.objectives[0] = solution.totalFuelConsumption + solution.longest_DriveTime 
             
         return solution
     
