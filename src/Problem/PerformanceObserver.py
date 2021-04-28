@@ -65,6 +65,7 @@ class PerformanceObserver(Observer):
         solutions = kwargs['SOLUTIONS']
         allSolutions = kwargs['SOLUTIONS']
         if type(solutions) == list:
+            
             best_solution = sorted(get_non_dominated_solutions(solutions),key=lambda solution:np.sum(solution.objectives))[0]
             
             self.fronts.append(get_non_dominated_solutions(solutions))
