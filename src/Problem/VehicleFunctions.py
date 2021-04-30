@@ -1,4 +1,4 @@
-def initializeVehicles(startIndices,vehicleData,routingContext,heterogeneousFleet = False):
+def initializeVehicles(startIndices,vehicleData,heterogeneousFleet = False):
     vehicleDict = {}
 
     if not heterogeneousFleet:
