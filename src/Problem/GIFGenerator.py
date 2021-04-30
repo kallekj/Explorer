@@ -4,7 +4,7 @@ import imageio
 import numpy as np
 from Problem.VehicleFunctions import *
 from Problem.PlotFunctions import *
-def generate_routes_gif(performance_observer,vehicles,points_coordinate,dbf,congestion_edge,color_map,savePath):
+def generate_routes_gif(performance_observer,vehicles,points_coordinate,dbf,congestion_edge,color_map,savePath,axlimits=None):
 
     plt.ioff()
 
@@ -19,8 +19,9 @@ def generate_routes_gif(performance_observer,vehicles,points_coordinate,dbf,cong
 
         fig,_ = plot_routes_with_congestion(numerical_path,points_coordinate,dbf,congestion_edge,colors=color_map,station_ids = True, here_api=False)
         fig.set_size_inches(10,10)
-        fig.axes[0].set_xlim(-2,1)
-        fig.axes[0].set_ylim(50.5,52)
+        if axlimits:
+            fig.axes[0].set_xlim(axlimits["x"])
+            fig.axes[0].set_ylim(axlimits["y"])
         fig.axes[0].set_title("Fuel Consumption: {} (L)".format(round(performance_observer.total_consumptions[index],2)),fontsize=20)
         fig.canvas.draw()       # draw the canvas, cache the renderer
         image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')

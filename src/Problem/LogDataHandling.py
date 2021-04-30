@@ -98,3 +98,51 @@ def extractOptimalParameters(resultsDataFrame,tukeyResult,amount=5):
     for group in optimalParamGroups:
         resultDF = pd.concat([resultDF,(resultsDataFrame.where(resultsDataFrame["Parameter Group"] == np.float(group))).dropna()],axis=0)
     return resultDF
+
+
+def gini_coefficient(x):
+    """Compute Gini coefficient of array of values
+    https://stackoverflow.com/a/61154922/12463908"""
+    diffsum = 0
+    for i, xi in enumerate(x[:-1], 1):
+        diffsum += np.sum(np.abs(xi - x[i:]))
+    return diffsum / (len(x)**2 * np.mean(x))
+
+def get_gini_coefficients(dataframe,dataset=None):
+    if dataset:
+        dataframe = dataframe.where(dataframe.dataset == dataset).dropna(how="all")
+    coefficients = [gini_coefficient(np.array(x)) for x in dataframe.vehicle_route_time.to_numpy()]
+    return coefficients
+
+def plot_gini_distribution(dataframe,algoritm_name,dataset=None,savepath=None):
+    fig,ax = plt.subplots(1)
+    coefficients = get_gini_coefficients(dataframe,dataset)
+    
+    coefficients_cumulative = np.cumsum(sorted(coefficients))
+    coefficients_cumulative-=coefficients_cumulative[0]
+    coefficients_cumulative = coefficients_cumulative/coefficients_cumulative[-1]
+    
+    x =  np.array(range(0, len(coefficients)))
+    x = x/x[-1]
+    equality_line = x
+    
+    plt.plot(x,[0]*len(x),linestyle="-",color="k")
+    plt.plot([1]*len(x),x,linestyle="-",color="k")
+    plt.plot(x,equality_line,linestyle="-",color="k",label = "Line of equality")
+    plt.plot(x,coefficients_cumulative,linestyle="-.",color="k",label="Lorenz Curve")
+    plt.fill_between(x,coefficients_cumulative,equality_line,alpha=0.3)
+    mean_gini_value = np.mean(coefficients)
+    if dataset:
+        plt.title(r"$\bf{%s}\ Mean\ Gini \ Index\ for\ %s \ %s$" % (algoritm_name,dataset, np.round(mean_gini_value,4)))
+    else:
+        plt.title(r"$\bf{%s}\ Mean\ Gini \ Index\ %s$" % (algoritm_name, np.round(mean_gini_value,4)))
+        
+    plt.xlabel("Cumulative Share of Vehicles")
+    plt.ylabel("Cumulative Share of Drive time")
+    ax.yaxis.set_label_position("right")
+    ax.yaxis.tick_right()
+    plt.legend(fontsize=28)
+    
+    if savepath:
+        plt.savefig("{}.pdf".format(savepath))
+    plt.show()
