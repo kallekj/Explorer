@@ -11,6 +11,10 @@ from ortools.constraint_solver import pywrapcp
 from ortools.constraint_solver.pywrapcp import SolutionCollector
 import re
 
+
+
+
+
 def generate_routes(coordinates, api_key=""):
     """
         Generates a polyline between coordinates sequentially, e.g. (x1,y1) -> (x2,y2) -> (x3,y3) -> (xn,yn)
