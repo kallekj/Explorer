@@ -286,7 +286,7 @@ class VRP2_pickup_and_drop(PermutationProblem):
         solution.constraints,solution.flag = evaluate_constraints2(solution=solution,routingContext=self.routing_context,pickup_points=self.pickup_points,
                                                                  end_positions=self.end_positions,vehicles=self.vehicles,max_allowed_drivetime=max_drivetime,min_allowed_drivetime=self.min_allowed_drivetime)
         
-        
+        solution.constraints[1]=0
         if self.name in ["SA","GA","IBEA"]:
             for constraint_val in solution.constraints:
                 solution.totalFuelConsumption += abs(constraint_val)
@@ -507,9 +507,9 @@ def evaluate_fitness2(solution,routing_context,vehicles):
             
             fuel_consumptions = fuel_consumption_rauniyar_dev2(route_distances,route_times,cumulative_load)
             
-            pickup_time = 15 * len(set([pos % len(routing_context.distance_matrix) for pos in current_path])) - 1  
             
-            route_time = np.sum(route_times) +  pickup_time
+            
+            route_time = np.sum(route_times)
 
             solution.vehicle_route_distances.append(route_dist)
             solution.vehicle_fuel_consumptions.append(fuel_consumptions)
@@ -588,7 +588,10 @@ def evaluate_constraints2(solution,routingContext,pickup_points,end_positions,ve
         flags.append("start")
 
     if max(solution.vehicle_route_times) > (max_allowed_drivetime):
-        constraints[3] = max_allowed_drivetime - max(solution.vehicle_route_times)
+        violations = list(filter(lambda x: x > max_allowed_drivetime,solution.vehicle_route_times))
+        constraints[3] = max_allowed_drivetime* len(violations) - sum(violations)
+        
+        
         flags.append("time")
     if min(solution.vehicle_route_times) < min_allowed_drivetime:
         violations = list(filter(lambda x: x < min_allowed_drivetime,solution.vehicle_route_times))
