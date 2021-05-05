@@ -5,12 +5,6 @@ import copy
 def cheapest_insertion_dict(nodes,vehicles,end_positions,routing_context,set_nearest_ends=False):
     
     def _get_total_path_capacity(path,locationNodes):
-#         result = 0
-#         for p in path:
-#             print(p)
-#             result += int(routing_context.station_data.iloc[p]["Demand(kg)"]) if type(p) != str else 0
-#         return result
-        
         return np.sum([ int(routing_context.station_data.iloc[p]["Demand(kg)"]) if type(p) != str else 0 for p in path])
 
     paths = [[x] for x in vehicles.keys()]
