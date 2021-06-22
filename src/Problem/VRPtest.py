@@ -13,6 +13,17 @@ from Problem.InitialSolution import *
 from Problem.FitnessEvaluation import *
 from Problem.VehicleFunctions import *
 
+
+
+def gini_coefficient(x):
+    """Compute Gini coefficient of array of values
+    https://stackoverflow.com/a/61154922/12463908"""
+    diffsum = 0
+    for i, xi in enumerate(x[:-1], 1):
+        diffsum += np.sum(np.abs(xi - x[i:]))
+    return diffsum / (len(x)**2 * np.mean(x))
+
+
 def shuffle_paths(variables,ends=None):
     result = []
     end_indices = []
@@ -53,7 +64,7 @@ class VRP_pickup_and_drop(PermutationProblem):
         super(VRP_pickup_and_drop,self).__init__()
         
         self.routing_context = problemData["routing_context"]
-        self.object_directions=[self.MINIMIZE,self.MINIMIZE]
+        self.object_directions=[self.MINIMIZE,self.MINIMIZE,self.MINIMIZE]
         self.number_of_objectives = problemData['objective_amount']
         self.objective_labels = problemData['objective_labels']
         self.number_of_constraints = problemData['constraint_amount']
@@ -147,6 +158,12 @@ class VRP_pickup_and_drop(PermutationProblem):
         
         
         #======================APPLY FITNESSVALUES=========================#
+        
+        if len(solution.objectives) ==3:
+            solution.objectives[0] = solution.totalFuelConsumption
+            solution.objectives[1] = solution.total_DriveTime/60 
+            solution.objectives[2] = gini_coefficient(np.array(solution.vehicle_route_times)) * 300
+        
         if len(solution.objectives) == 2:
             solution.objectives[0] = solution.totalFuelConsumption
             solution.objectives[1] = solution.longest_DriveTime 

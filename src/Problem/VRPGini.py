@@ -12,7 +12,7 @@ from Problem.PerformanceObserver import *
 from Problem.InitialSolution import *
 from Problem.FitnessEvaluation import *
 from Problem.VehicleFunctions import *
-
+import math
 
 
 def gini_coefficient(x):
@@ -76,6 +76,9 @@ class VRPGini(PermutationProblem):
         self.assignClosestEndPoint = False
         self.initial_solution = problemData['initial_solution']
         self.min_allowed_drivetime = problemData['min_drivetime'] * (60**2)
+        self.gini_factor = 0
+        
+        
         
     def create_paths(self,solution):
         vehicle_order = list(filter(lambda x: type(x) == str,solution.variables))
@@ -118,12 +121,14 @@ class VRPGini(PermutationProblem):
 
         #======================CALCULATE FITNESS=========================#
         solution = evaluate_fitness(solution=solution,routing_context=self.routing_context,vehicles=self.vehicles)
-        
         solution.totalFuelConsumption = np.sum(solution.vehicle_fuel_consumptions)
-        solution.total_DriveTime = sum(solution.vehicle_route_times)/(60)
+        solution.total_DriveTime = sum(solution.vehicle_route_times)/(60**2)
         solution.longest_DriveTime = max(solution.vehicle_route_times)/60
         solution.shortest_DriveTime = min(solution.vehicle_route_times)/60
         unused_capacity = sum([3650 - sum(load) if sum(load) < 3650 else 0 for load in solution.vehicle_loads])
+        
+        if self.gini_factor == 0:
+            self.gini_factor = int(math.ceil(solution.totalFuelConsumption / 100.0)) * 100
         
         #============CHECK CONSTRAINTS==============
         solution.constraints = [0 for x in range(len(solution.constraints))]
@@ -142,15 +147,15 @@ class VRPGini(PermutationProblem):
         
         if len(solution.objectives) ==3:
             solution.objectives[0] = solution.totalFuelConsumption
-            solution.objectives[1] = solution.longest_DriveTime 
-            solution.objectives[2] = gini_coefficient(np.array(solution.vehicle_route_times)) * 1000
+            solution.objectives[1] = solution.total_DriveTime 
+            solution.objectives[2] = gini_coefficient(np.array(solution.vehicle_route_times)) *200#* 200
         
         if len(solution.objectives) ==2:
             solution.objectives[0] = solution.totalFuelConsumption
-            solution.objectives[1] = solution.longest_DriveTime 
+            solution.objectives[1] = gini_coefficient(np.array(solution.vehicle_route_times)) *self.gini_factor#* 200#solution.total_DriveTime 
 
         if len(solution.objectives) == 1:
-            solution.objectives[0] = solution.totalFuelConsumption + solution.longest_DriveTime 
+            solution.objectives[0] = solution.totalFuelConsumption + solution.total_DriveTime + gini_coefficient(np.array(solution.vehicle_route_times)) *200
             
         return solution
     

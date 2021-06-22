@@ -65,8 +65,10 @@ class PerformanceObserver(Observer):
         solutions = kwargs['SOLUTIONS']
         allSolutions = kwargs['SOLUTIONS']
         if type(solutions) == list:
+            #Should maby sort on the sum of constraints aswell?
+            #best_solution = sorted(get_non_dominated_solutions(solutions),key=lambda solution:abs(np.sum(solution.constraints)) + np.sum(solution.objectives))[0]
             
-            best_solution = sorted(get_non_dominated_solutions(solutions),key=lambda solution:np.sum(solution.objectives))[0]
+            best_solution = sorted(get_non_dominated_solutions(solutions),key=lambda solution: np.sum(solution.objectives))[0]
             
             self.fronts.append(get_non_dominated_solutions(solutions))
             solution =best_solution
