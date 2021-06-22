@@ -1,6 +1,8 @@
 # Explorer
 The algorithm developed in the Master Thesis "Capacitated Multi Depot Green Vehicle Routing for Transporting End-of-Life electrical waste"
 
+![alt text](https://github.com/kallekj/Explorer/blob/main/src/imgs/examplegif.gif)
+
 ## Setup
 
 `python -m venv env`
@@ -14,3 +16,4 @@ The algorithm developed in the Master Thesis "Capacitated Multi Depot Green Vehi
 ### Update Requirements
 
 `python -m pip freeze > requirements.txt`
+
