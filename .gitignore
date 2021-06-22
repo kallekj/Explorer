@@ -131,3 +131,4 @@ dmypy.json
 datasets/*
 Untitled.ipynb
 src/sigma_data/*
+src/sigma_data

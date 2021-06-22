@@ -65,8 +65,10 @@ class PerformanceObserver(Observer):
         solutions = kwargs['SOLUTIONS']
         allSolutions = kwargs['SOLUTIONS']
         if type(solutions) == list:
+            #Should maby sort on the sum of constraints aswell?
+            #best_solution = sorted(get_non_dominated_solutions(solutions),key=lambda solution:abs(np.sum(solution.constraints)) + np.sum(solution.objectives))[0]
             
-            best_solution = sorted(get_non_dominated_solutions(solutions),key=lambda solution:np.sum(solution.objectives))[0]
+            best_solution = sorted(get_non_dominated_solutions(solutions),key=lambda solution: np.sum(solution.objectives))[0]
             
             self.fronts.append(get_non_dominated_solutions(solutions))
             solution =best_solution
@@ -111,37 +113,42 @@ class PerformanceObserver(Observer):
                 
                 clear_output(wait=True)
                 if len(fitness) == 1:
-                    self.currentIGD = self.IGD.compute([[self.currentBestFuelConsumption,self.currentBestDriveTime]])
                     
                     
-                    print("Epoch:{} of {}\nEvaluations: {}/{}\nParams: {}\nIGD:{}\nBest fitness: {}\
+                    print("Epoch:{} of {}\nEvaluations: {}/{}\nParams: {}\nBest fitness: {}\
                           \nBest total fuel consumption:{} \nBest total drive time:{}\
                           \nComputing time: {}s\nAverage computing speed: {}it/s\
                           \nCurrent Route:{}\nFlags: {}\nViolation:{}\nVehicle Amount:{}".format(
-                            self.currentEpoch+1,self.maxEpochs,evaluations,self.max_iter,self.current_params,self.currentIGD, 
+                            self.currentEpoch+1,self.maxEpochs,evaluations,self.max_iter,self.current_params, 
                             round(self.currentBestFitness[0],4),round(consumption,2),round(self.currentBestDriveTime,2), 
                             round(computing_time,2),round(evaluations/computing_time,2),current_route,flags
                         ,overall_constraint_violation_degree(solution),len(current_route)),flush=True)
                     
-                elif len(fitness)== 2:
-                    if type(allSolutions) == list:
-                        objec = [x.objectives for x in get_non_dominated_solutions(allSolutions)]
-                        self.currentIGD = self.IGD.compute(objec)
-                    else:
-                        self.currentIGD = self.IGD.compute([[self.currentBestFuelConsumption,self.currentBestDriveTime]])
-                    
-                    print("Epoch:{} of {}\nEvaluations: {}/{}\nParams: {} \nIGD:{}\nBest fitness: {} --- {}\
+                elif len(fitness)== 2:                
+                    print("Epoch:{} of {}\nEvaluations: {}/{}\nParams: {}\nBest fitness: {} --- {}\
                         \nBest total fuel consumption:{} \nComputing time: {}s\
                         \nAverage computing speed: {}it/s\nCurrent Route:{}\nFlags: {}\
                         \nViolation:{}\nVehicle amount:{}".format(
                         
-                        self.currentEpoch+1,self.maxEpochs,evaluations,self.max_iter,self.current_params,self.currentIGD,
-                        round(self.currentBestFitness[0],4),round(self.currentBestFitness[1],4),round(self.currentBestFitness[0],2), 
+                        self.currentEpoch+1,self.maxEpochs,evaluations,self.max_iter,self.current_params,
+                        round(consumption,4),round(self.currentBestFitness[1],4),round(consumption,2), 
+                        round(computing_time,2),round(evaluations/computing_time,2),current_route,flags
+                        ,overall_constraint_violation_degree(solution),len(current_route)),
+                          flush=True)
+                elif len(fitness)== 3:
+                    
+                    print("Epoch:{} of {}\nEvaluations: {}/{}\nParams: {}\nBest fitness: {} --- {} --- {}\
+                        \nBest total fuel consumption:{} \nComputing time: {}s\
+                        \nAverage computing speed: {}it/s\nCurrent Route:{}\nFlags: {}\
+                        \nViolation:{}\nVehicle amount:{}".format(
+                        
+                        self.currentEpoch+1,self.maxEpochs,evaluations,self.max_iter,self.current_params,
+                        round(consumption,4),round(self.currentBestFitness[1],4),round(self.currentBestFitness[2],4),round(consumption,2), 
                         round(computing_time,2),round(evaluations/computing_time,2),current_route,flags
                         ,overall_constraint_violation_degree(solution),len(current_route)),
                           flush=True)
                 
-                self.IGD_values.append(self.currentIGD)
+                #self.IGD_values.append(self.currentIGD)
                 
                 
                 

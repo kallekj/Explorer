@@ -81,6 +81,14 @@ def shuffle_paths(variables,ends=None):
     return result
 
 
+
+def gini_coefficient(x):
+    """Compute Gini coefficient of array of values
+    https://stackoverflow.com/a/61154922/12463908"""
+    diffsum = 0
+    for i, xi in enumerate(x[:-1], 1):
+        diffsum += np.sum(np.abs(xi - x[i:]))
+    return diffsum / (len(x)**2 * np.mean(x))
 class VRP2(PermutationProblem):
     
     def __init__(self,problemData):
@@ -162,6 +170,12 @@ class VRP2(PermutationProblem):
         
         
         #======================APPLY FITNESSVALUES=========================#
+        
+        if len(solution.objectives) ==3:
+            solution.objectives[0] = solution.totalFuelConsumption
+            solution.objectives[1] = (solution.total_DriveTime /60)#*len(solution.vehicle_route_times)
+            solution.objectives[2] = gini_coefficient(np.array(solution.vehicle_route_times)) *200
+            
         if len(solution.objectives) == 2:
             solution.objectives[0] = solution.totalFuelConsumption
             solution.objectives[1] = solution.longest_DriveTime
@@ -294,6 +308,11 @@ class VRP2_pickup_and_drop(PermutationProblem):
         
         
         #======================APPLY FITNESSVALUES=========================#
+        if len(solution.objectives) ==3:
+            solution.objectives[0] = solution.totalFuelConsumption
+            solution.objectives[1] = (solution.total_DriveTime /60)#*len(solution.vehicle_route_times)
+            solution.objectives[2] = gini_coefficient(np.array(solution.vehicle_route_times)) *1000
+            
         if len(solution.objectives) == 2:
             solution.objectives[0] = solution.totalFuelConsumption
             solution.objectives[1] = solution.longest_DriveTime
@@ -387,14 +406,14 @@ def cheapest_insertion_dict2(nodes,vehicles,end_positions,routing_context,set_ne
         for ind,path in enumerate(paths):
             min_cost = 10e10
             min_end = 0
-
+        
             for end in temp_ends:
 
 
                 if type(path[-1]) != str:
-                    cost = routing_context.time_matrix[path[-1]][end]
+                    cost = routing_context.time_matrix[path[-1]% len(routing_context.time_matrix)][end% len(routing_context.time_matrix)]
                 else:
-                    cost = routing_context.time_matrix[vehicles[path[-1]]["startPos"]][end]
+                    cost = routing_context.time_matrix[vehicles[path[-1]]["startPos"]% len(routing_context.time_matrix)][end% len(routing_context.time_matrix)]
 
 
 
@@ -590,9 +609,9 @@ def evaluate_constraints2(solution,routingContext,pickup_points,end_positions,ve
     if max(solution.vehicle_route_times) > (max_allowed_drivetime):
         violations = list(filter(lambda x: x > max_allowed_drivetime,solution.vehicle_route_times))
         constraints[3] = max_allowed_drivetime* len(violations) - sum(violations)
-        
-        
+
         flags.append("time")
+        
     if min(solution.vehicle_route_times) < min_allowed_drivetime:
         violations = list(filter(lambda x: x < min_allowed_drivetime,solution.vehicle_route_times))
         constraints[5] = sum(violations) - min_allowed_drivetime*len(violations)
