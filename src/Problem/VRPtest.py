@@ -142,6 +142,11 @@ class VRP_pickup_and_drop(PermutationProblem):
         solution.total_DriveTime = sum(solution.vehicle_route_times)/(60)
         solution.longest_DriveTime = max(solution.vehicle_route_times)/60
         solution.shortest_DriveTime = min(solution.vehicle_route_times)/60
+        if self.gini_factor == 0:
+            self.gini_factor = int(math.ceil(solution.totalFuelConsumption / 100.0)) * 100
+        
+        
+        
         unused_capacity = sum([3650 - sum(load) if sum(load) < 3650 else 0 for load in solution.vehicle_loads])
         
         #============CHECK CONSTRAINTS==============
