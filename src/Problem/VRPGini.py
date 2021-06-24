@@ -148,7 +148,7 @@ class VRPGini(PermutationProblem):
         if len(solution.objectives) ==3:
             solution.objectives[0] = solution.totalFuelConsumption
             solution.objectives[1] = solution.total_DriveTime 
-            solution.objectives[2] = gini_coefficient(np.array(solution.vehicle_route_times)) *200#* 200
+            solution.objectives[2] = gini_coefficient(np.array(solution.vehicle_route_times)) *self.gini_factor
         
         if len(solution.objectives) ==2:
             solution.objectives[0] = solution.totalFuelConsumption
