@@ -76,7 +76,7 @@ class VRP_pickup_and_drop(PermutationProblem):
         self.assignClosestEndPoint = False
         self.initial_solution = problemData['initial_solution']
         self.min_allowed_drivetime = problemData['min_drivetime'] * (60**2)
-        
+        self.gini_factor = 0
     def create_paths(self,solution):
         vehicle_order = list(filter(lambda x: type(x) == str,solution.variables))
         
@@ -167,7 +167,7 @@ class VRP_pickup_and_drop(PermutationProblem):
         if len(solution.objectives) ==3:
             solution.objectives[0] = solution.totalFuelConsumption
             solution.objectives[1] = solution.total_DriveTime/60 
-            solution.objectives[2] = gini_coefficient(np.array(solution.vehicle_route_times)) * 300
+            solution.objectives[2] = gini_coefficient(np.array(solution.vehicle_route_times)) * self.gini_factor
         
         if len(solution.objectives) == 2:
             solution.objectives[0] = solution.totalFuelConsumption
